@@ -108,4 +108,52 @@ export class AnimationUtility {
       })
     })
   }
+
+  /**
+   * Mirrors animations by swapping left and right bone tracks.
+   * This swaps tracks that end with 'L' or 'R' to create mirrored animations.
+   */
+  static apply_animation_mirroring (animation_clips: TransformedAnimationClipPair[]): void {
+    // do the swapping of the left/right tracks since we have all mirrored tracks exist now
+    animation_clips.forEach((warped_clip: TransformedAnimationClipPair) => {
+      const tracks = warped_clip.display_animation_clip.tracks
+      const clip_name: string = warped_clip.display_animation_clip.name
+      const track_swaps: Array<{ leftIndex: number, rightIndex: number, clipDetails: string }> = []
+
+      // Find pairs of L/R tracks to swap
+      for (let i = 0; i < tracks.length; i++) {
+        const track = tracks[i]
+        const track_name = track.name
+
+        // Check if this is a left track that we haven't already processed
+        if (track_name.endsWith('L.quaternion')) {
+          // Find the corresponding right track
+          const right_track_name = track_name.replace(/L\.quaternion$/, 'R.quaternion')
+          const right_track_index = tracks.findIndex(t => t.name === right_track_name)
+
+          if (right_track_index !== -1) {
+            track_swaps.push({ leftIndex: i, rightIndex: right_track_index, clipDetails: clip_name + ':' + track_name })
+          }
+        }
+      }
+ 
+      // Perform the swaps
+      track_swaps.forEach(({ leftIndex, rightIndex, clipDetails }, idx) => {
+        const left_track = tracks[leftIndex]
+        const right_track = tracks[rightIndex]
+
+        // Clone the times and values to avoid reference issues
+        const left_values = left_track.values.slice()
+        const right_values = right_track.values.slice()
+        const left_times = left_track.times.slice()
+        const right_times = right_track.times.slice()
+
+        // Swap the track values
+        left_track.values = right_values
+        left_track.times = right_times
+        right_track.values = left_values
+        right_track.times = left_times
+      })
+    })
+  }
 }

@@ -230,6 +230,11 @@ export class StepAnimationsListing extends EventTarget {
     this.animation_clips_loaded.forEach((warped_clip: TransformedAnimationClipPair) => {
       warped_clip.display_animation_clip = AnimationUtility.deep_clone_animation_clip(warped_clip.original_animation_clip)
     })
+
+    if (this.mirror_animations_enabled) {
+      AnimationUtility.apply_animation_mirroring(this.animation_clips_loaded)
+    }
+
     /// Apply the arm extension warp:
     AnimationUtility.apply_arm_extension_warp(this.animation_clips_loaded, this.warp_arm_amount)
   }
@@ -319,6 +324,9 @@ export class StepAnimationsListing extends EventTarget {
     this.ui.dom_mirror_animations_checkbox?.addEventListener('change', (event) => {
       const is_checked: boolean = this.ui.dom_mirror_animations_checkbox?.checked ?? false
       this.mirror_animations_enabled = is_checked
+      // Rebuild animations with or without mirroring
+      this.rebuild_warped_animations()
+      this.play_animation(this.current_playing_index)
     })
 
     // helps ensure we don't add event listeners multiple times
