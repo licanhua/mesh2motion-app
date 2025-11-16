@@ -111,6 +111,11 @@ export class Mesh2MotionEngine {
     }
   }
 
+  public set_camera_position (position: Vector3): void {
+    this.camera.position.copy(position)
+    this.controls?.update()
+  }
+
   private setup_environment (): void {
     this.renderer.setSize(window.innerWidth, window.innerHeight)
     this.renderer.shadowMap.enabled = true

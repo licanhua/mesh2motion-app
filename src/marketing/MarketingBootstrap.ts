@@ -1,3 +1,4 @@
+import { Vector3 } from 'three'
 import { ProcessStep } from '../lib/enums/ProcessStep'
 import { SkeletonType } from '../lib/enums/SkeletonType'
 import { Mesh2MotionEngine } from '../Mesh2MotionEngine'
@@ -9,6 +10,11 @@ export class MarketingBootstrap {
   constructor () {
     this.mesh2motion_engine = new Mesh2MotionEngine()
     this.add_event_listeners()
+
+    // default: X:0 (centered), Y:1.7 (eye-level), Z:5 (front view)
+    // view can be changed to a bit higher looking down at an angle
+    const tilted_camera_angle_position = new Vector3().set(6, 5, 11)
+    this.mesh2motion_engine.set_camera_position(tilted_camera_angle_position)
   }
 
   private change_active_skeleton (active_dom_button: HTMLElement): void {
