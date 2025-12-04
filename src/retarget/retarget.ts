@@ -1,5 +1,6 @@
 import { Mesh2MotionEngine } from '../Mesh2MotionEngine.ts'
 import { Group, Object3DEventMap, Skeleton, SkinnedMesh, Vector3 } from 'three'
+import { ModalDialog } from '../lib/ModalDialog.ts'
 
 class RetargetModule {
   private mesh2motion_engine: Mesh2MotionEngine
@@ -61,6 +62,7 @@ class RetargetModule {
           const retargetable_meshes = this.mesh2motion_engine.load_model_step.get_final_retargetable_model_data()
           const is_valid_skinned_mesh = this.validate_skinned_mesh_has_bones(retargetable_meshes)
           if (is_valid_skinned_mesh) {
+            console.log('adding retargetable meshes to scene for retargeting')
             this.reset_skinned_mesh_to_rest_pose(retargetable_meshes)
             this.mesh2motion_engine.get_scene().add(retargetable_meshes)
           }
@@ -84,9 +86,7 @@ class RetargetModule {
     })
   }
 
-  private validate_skinned_mesh_has_bones (retargetable_model: Group<Object3DEventMap> ): boolean {
-    console.log('Validating retargetable model for bones...', retargetable_model)
-
+  private validate_skinned_mesh_has_bones (retargetable_model: Group<Object3DEventMap>): boolean {
     // Collect all SkinnedMeshes
     const skinned_meshes: SkinnedMesh[] = []
     retargetable_model.traverse((child) => {
@@ -99,7 +99,7 @@ class RetargetModule {
     // Check if we have any SkinnedMeshes
     // TODO: Error can be a dialog box
     if (skinned_meshes.length === 0) {
-      console.error('No SkinnedMeshes found in model')
+      new ModalDialog('No SkinnedMeshes found in file', 'Error opening file').show()
       return false
     }
 
@@ -108,8 +108,7 @@ class RetargetModule {
   }
 
   private showErrorDialog (message: string): void {
-    // Simple alert for now - could be replaced with a proper modal dialog later
-    alert(message)
+    new ModalDialog('Could not find file in ZIP', 'Error opening file').show()
   }
 }
 
