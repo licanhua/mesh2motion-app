@@ -195,11 +195,7 @@ export class StepBoneMapping extends EventTarget {
       // Check if this target bone has a mapping
       const mapped_source_bone = this.bone_mapping.get(name)
       if (mapped_source_bone !== undefined) {
-        // Show the mapping with an arrow
-        const arrow_span = document.createElement('span')
-        arrow_span.textContent = '← '
-        arrow_span.className = 'mapping-arrow'
-        
+       
         const source_name_span = document.createElement('span')
         source_name_span.textContent = mapped_source_bone
         source_name_span.className = 'mapping-source-name'
@@ -207,7 +203,6 @@ export class StepBoneMapping extends EventTarget {
         const target_name_span = document.createElement('span')
         target_name_span.textContent = name
         
-        bone_item.appendChild(arrow_span)
         bone_item.appendChild(source_name_span)
         bone_item.appendChild(target_name_span)
       } else {

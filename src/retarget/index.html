@@ -46,36 +46,45 @@
             <div style="display: flex; flex-direction: row; gap: 1rem; margin-top: 1rem;">
                 <!-- imported 3d skinned mesh and bones list-->
                 <div class="bone-map-section">
-                    <p>Your 3d rigged mesh</p>
-                    <!-- there are some issues going on with scaling the skeleton for FBX and other formats
-                         so we will start simple for now with just GLB files -->
-                    <input type="file" id="upload-file" accept=".glb" style="display: none;" />
-                    <label for="upload-file" class="button" id="load-model-button">Upload Skinned Model</label>
-                    
-                    <p>Bones List <span id="source-bone-count">(0)</span></p>
-                    <div id="source-bones-list">
-                        <p style="color: var(--text-secondary);">No source skeleton loaded</p>
+                    <p class="bone-map-heading">Your 3d rig model</p>
+                    <div class="bone-map-content">
+                        <!-- there are some issues going on with scaling the skeleton for FBX and other formats so we will start simple for now with just GLB files -->
+                        <input type="file" id="upload-file" accept=".glb" style="display: none;" />
+                        <label for="upload-file" class="button" id="load-model-button">Upload GLB</label>
+                        
+                        <p>Bones List <span id="source-bone-count">(0)</span></p>
+                        <div id="source-bones-list">
+                            <p style="color: var(--text-secondary);">No source skeleton loaded</p>
+                        </div>
                     </div>
+
                 </div>
+
+                <div style="align-self: center; font-size: 2rem; color: var(--text-secondary);">
+                    ⇨
+                </div>  
 
                 <!-- target skeleton selection and bones list-->
                 <div class="bone-map-section">
-                    <h2>Mesh2Motion Skeleton</h2>
-                    <div id="skeleton-selection-container" >
-                        <!-- <label for="skeleton-type-select">Choose Target Skeleton:</label> -->
-                        <select id="skeleton-type-select" class="button">
-                            <option value="">-- Select Skeleton --</option>
-                            <option value="human">Human</option>
-                            <option value="quadraped">Quadruped (Fox)</option>
-                            <option value="bird">Bird</option>
-                            <option value="dragon">Dragon</option>
-                        </select>
+                    <h2 class="bone-map-heading">Mesh2Motion Skeleton</h2>
+                    <div class="bone-map-content">
+                        <div id="skeleton-selection-container" >
+                            <!-- <label for="skeleton-type-select">Choose Target Skeleton:</label> -->
+                            <select id="skeleton-type-select" class="button">
+                                <option value="">-- Select Skeleton --</option>
+                                <option value="human">Human</option>
+                                <option value="quadraped">Quadruped (Fox)</option>
+                                <option value="bird">Bird</option>
+                                <option value="dragon">Dragon</option>
+                            </select>
+                        </div>
+                        
+                        <p>Bones List <span id="target-bone-count">(0)</span></p>
+                        <div id="target-bones-list" >
+                            <p style="color: var(--text-secondary);">No target skeleton loaded</p>
+                        </div>
                     </div>
-                    
-                    <p>Bones List <span id="target-bone-count">(0)</span></p>
-                    <div id="target-bones-list" >
-                        <p style="color: var(--text-secondary);">No target skeleton loaded</p>
-                    </div>
+
                 </div>
             </div>
             
