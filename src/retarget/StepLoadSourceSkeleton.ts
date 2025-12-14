@@ -31,6 +31,21 @@ export class StepLoadSourceSkeleton extends EventTarget {
       this.add_event_listeners()
       this._added_event_listeners = true
     }
+    
+    // Auto-load the default human skeleton
+    this.load_default_skeleton()
+  }
+  
+  private load_default_skeleton (): void {
+    // Set the skeleton type to human and load it automatically
+    this.skeleton_type = SkeletonType.Human
+    
+    this.load_skeleton_from_path(`/${SkeletonType.Human}`).catch((error) => {
+      console.error('Failed to load default human skeleton:', error)
+    })
+    
+    // Dispatch event to notify that skeleton is being loaded
+    this.dispatchEvent(new CustomEvent('skeleton-loading'))
   }
 
   private add_event_listeners (): void {
@@ -47,11 +62,6 @@ export class StepLoadSourceSkeleton extends EventTarget {
 
     // Map selection to skeleton type enum
     this.skeleton_type = this.get_skeleton_type_enum(selected_value)
-    
-    if (this.skeleton_type === SkeletonType.None) {
-      console.error('Invalid skeleton selection:', selected_value)
-      return
-    }
     
     // Clear any previously loaded skeleton
     this.clear_previous_skeleton()
