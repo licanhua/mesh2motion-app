@@ -1,5 +1,6 @@
 import { Bone, Group, Object3D, SkinnedMesh } from 'three'
 import { BoneCategoryMapper } from './BoneCategoryMapper'
+import { MixamoMapper } from './MixamoMapper'
 
 /**
  * Bone categories for grouping bones by anatomical area
@@ -68,6 +69,15 @@ export class BoneAutoMapper {
     console.log('\n=== FINAL BONE METADATA ===')
     console.log('Source bones metadata:', source_bones_meta)
     console.log('Target bones metadata:', target_bones_meta)
+
+    // if the target is a mixamo rig and our skeleton type is human, we can do a direct name mapping
+    // without worrying about guessing
+    const is_target_mixamo_rig: boolean = target_bones_meta.some(bone => bone.name.toLowerCase().includes('mixamorig'))
+    if (is_target_mixamo_rig) {
+      console.log('Target skeleton appears to be a Mixamo rig, performing direct name mapping...')
+      mappings = MixamoMapper.map_mixamo_bones(source_bones_meta, target_bones_meta)
+      return mappings
+    }
 
     // Match bones within each category
     const categories: BoneCategory[] = [
@@ -317,11 +327,7 @@ export class BoneAutoMapper {
 
   /**
    * Normalize bone names for comparison by:
-   * - Converting to lowercase
-   * - Removing common prefixes/suffixes
-   * - Standardizing separators
-   * - Removing side indicators (since we have that info separately)
-   * - Standardizing numeric suffixes
+   * This will help us later when done auto-mapping and we want more similar names 
    */
   private static normalize_bone_name (bone_name: string, category: BoneCategory, side: BoneSide): string {
     let normalized = bone_name.toLowerCase()
@@ -350,17 +356,7 @@ export class BoneAutoMapper {
     // Apply category-specific normalizations
     if (category === BoneCategory.Hands) {
       // Standardize finger naming variations
-      normalized = normalized.replace(/\b(thumb|index|middle|ring|pinky|pinkie)\b/g, (match) => {
-        const finger_map: Record<string, string> = {
-          'thumb': 'thumb',
-          'index': 'index',
-          'middle': 'middle',
-          'ring': 'ring',
-          'pinky': 'pinky',
-          'pinkie': 'pinky'
-        }
-        return finger_map[match] || match
-      })
+      // potentially do more here later with hand normalization
     } else if (category === BoneCategory.Legs) {
       // Standardize leg bone naming variations
       normalized = normalized.replace(/\b(upperleg|upleg|thigh)\b/g, 'thigh')
