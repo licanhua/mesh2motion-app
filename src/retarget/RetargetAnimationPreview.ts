@@ -114,7 +114,10 @@ export class RetargetAnimationPreview extends EventTarget {
           animation_file_path,
           (gltf: any) => {
             if (gltf.animations !== null && gltf.animations !== undefined && gltf.animations.length > 0) {
-              this.current_animation_clip = gltf.animations[0]
+              // find the "walk animation clip". every rig should have one of those.
+              const walk_animation = gltf.animations.find((clip: AnimationClip) => clip.name.toLowerCase().includes('walk'))
+              this.current_animation_clip = walk_animation ?? gltf.animations[0]
+
               if (this.current_animation_clip !== null) {
                 console.log('Loaded animation:', this.current_animation_clip.name)
 
