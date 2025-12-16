@@ -75,6 +75,16 @@ export class StepLoadTargetModel extends EventTarget {
           const is_valid_skinned_mesh = RetargetUtils.validate_skinned_mesh_has_bones(retargetable_meshes)
           if (is_valid_skinned_mesh) {
             console.log('adding retargetable meshes to scene for retargeting')
+
+            // we have valid skinned mesh(s). The could be very large though,
+            // we let's check to see how large everything is
+            const bounding_box = new Box3().setFromObject(retargetable_meshes)
+            const size = new Vector3()
+            bounding_box.getSize(size)
+            console.log('Retargetable meshes bounding box size:', size)
+            console.log('Skinned mesh data to inspect:', retargetable_meshes)
+
+
             RetargetUtils.reset_skinned_mesh_to_rest_pose(retargetable_meshes)
             this.mesh2motion_engine.get_scene().add(retargetable_meshes)
 

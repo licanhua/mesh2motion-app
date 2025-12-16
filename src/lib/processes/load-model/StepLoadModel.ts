@@ -1,7 +1,6 @@
 import { UI } from '../../UI.ts'
 import { ModelZipLoader } from './ModelZipLoader.ts'
 import { CustomFBXLoader, type FBXResults } from './CustomFBXLoader.ts'
-import { Box3 } from 'three/src/math/Box3.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 import { Scene } from 'three/src/scenes/Scene.js'
@@ -10,6 +9,7 @@ import { MathUtils } from 'three/src/math/MathUtils.js'
 import { FrontSide } from 'three/src/constants.js'
 import { BufferGeometry, Group, MeshPhongMaterial, Object3DEventMap, type Material, type Object3D, type SkinnedMesh } from 'three'
 import { ModalDialog } from '../../ModalDialog.ts'
+import { ModelCleanupUtility } from './ModelCleanupUtility.ts'
 
 // Note: EventTarget is a built-ininterface and do not need to import it
 export class StepLoadModel extends EventTarget {
@@ -353,7 +353,7 @@ export class StepLoadModel extends EventTarget {
 
     // Some objects come in very large, which makes it harder to work with
     // scale everything down to a max height. mutate the clean scene object
-    this.scale_model_on_import_if_extreme(clean_scene_with_only_models)
+    ModelCleanupUtility.scale_model_on_import_if_extreme(clean_scene_with_only_models)
 
     // preserved skinned meshes shouldn't be breaking apart mesh data
     // breaking apart skinned meshes converts it to a regular mesh which we don't want.
@@ -383,6 +383,7 @@ export class StepLoadModel extends EventTarget {
     // Find SkinnedMesh objects and preserve their complete bone hierarchy
     const skinned_meshes: SkinnedMesh[] = []
     model_data.traverse((child) => {
+      console.log('building out retargetable model data, inspecting child:', child)
       if (child.type === 'SkinnedMesh') {
         skinned_meshes.push(child as SkinnedMesh)
       }
@@ -432,57 +433,6 @@ export class StepLoadModel extends EventTarget {
     })
 
     return new_scene
-  }
-
-  private scale_model_on_import_if_extreme (scene_object: Scene | Group<Object3DEventMap>): void {
-    let scale_factor: number = 1.0
-
-    // calculate all the meshes to find out the max height
-    // some models are more wide like a bird, so don't just use height for this calculation
-    const bounding_box = this.calculate_bounding_box(scene_object)
-    const height = bounding_box.max.y - bounding_box.min.y
-    const width = bounding_box.max.x - bounding_box.min.x
-    const depth = bounding_box.max.z - bounding_box.min.z
-
-    const largest_dimension = Math.max(height, width, depth)
-
-    // if model is very large, or very small, scale it to 1.5 to help with application
-    if (largest_dimension > 0.5 && largest_dimension < 8) {
-      console.log('Model a reasonable size, so no scaling applied: ', bounding_box, ' units is bounding box')
-      return
-    } else {
-      console.log('Model is very large or small, so scaling applied: ', bounding_box, ' units is bounding box')
-    }
-
-    scale_factor = 1.5 / height // goal is to scale the model to 1.5 units height (similar to skeleton proportions)
-
-    // scale all the meshes down by the calculated amount
-    scene_object.traverse((child) => {
-      const child_obj = child as Mesh
-      if (child_obj.geometry) { // only scale if child has geometry data
-        console.log('Scaling mesh:', child_obj, ' by factor of ', scale_factor)
-        child_obj.geometry.scale(scale_factor, scale_factor, scale_factor)
-        // Recompute bounds after geometry modification
-        child_obj.geometry.computeBoundingBox()
-        child_obj.geometry.computeBoundingSphere()
-      }
-    })
-  }
-
-  private calculate_bounding_box (scene_object: Scene | Group<Object3DEventMap>): Box3 {
-    let bounding_box: Box3 = new Box3()
-
-    // see if this new object is a larger bounding box than previous
-    scene_object.traverse((child: Object3D) => {
-      const test_bb = new Box3().setFromObject(child)
-      if (test_bb.max.x - test_bb.min.x > bounding_box.max.x - bounding_box.min.x ||
-          test_bb.max.y - test_bb.min.y > bounding_box.max.y - bounding_box.min.y ||
-          test_bb.max.z - test_bb.min.z > bounding_box.max.z - bounding_box.min.z) {
-        bounding_box = test_bb
-      }
-    })
-
-    return bounding_box
   }
 
   public model_meshes (): Scene {
@@ -541,36 +491,4 @@ export class StepLoadModel extends EventTarget {
     })
   }
 
-  public move_model_to_floor (): void {
-    // go through all the meshes and find out the lowest point
-    // to use later. A model could contain multiple meshes
-    // and we want to make sure the offset is the same between all of them
-    let final_lowest_point: number = 0
-    this.final_mesh_data.traverse((obj: Object3D) => {
-      // if object is a mesh, rotate the geometry data
-      if (obj.type === 'Mesh') {
-        const mesh_obj: Mesh = obj as Mesh
-        const bounding_box = new Box3().setFromObject(mesh_obj)
-
-        if (bounding_box.min.y < final_lowest_point) {
-          final_lowest_point = bounding_box.min.y
-        }
-      }
-    })
-
-    // move all the meshes to the floor by the amount we calculated above
-    this.final_mesh_data.traverse((obj: Object3D) => {
-      // if object is a mesh, rotate the geometry data
-      if (obj.type === 'Mesh') {
-        const mesh_obj: Mesh = obj as Mesh
-
-        // this actually updates the geometry, so the origin will still be at 0,0,0
-        // maybe need to recompute the bounding box and sphere internally after translate
-        const offset = final_lowest_point * -1
-        mesh_obj.geometry.translate(0, offset, 0)
-        mesh_obj.geometry.computeBoundingBox()
-        mesh_obj.geometry.computeBoundingSphere()
-      }
-    })
-  }
 }
