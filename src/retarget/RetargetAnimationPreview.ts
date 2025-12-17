@@ -1,4 +1,4 @@
-import { AnimationClip, AnimationMixer, type Scene, type SkinnedMesh, VectorKeyframeTrack, QuaternionKeyframeTrack, type AnimationAction, Quaternion, Euler } from 'three'
+import { AnimationClip, AnimationMixer, type Scene, type SkinnedMesh, VectorKeyframeTrack, QuaternionKeyframeTrack, type AnimationAction, Quaternion, Euler, type Object3D } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { SkeletonType } from '../lib/enums/SkeletonType.ts'
 import { AnimationUtility } from '../lib/processes/animations-listing/AnimationUtility.ts'
@@ -280,8 +280,7 @@ export class RetargetAnimationPreview extends EventTarget {
    */
   private rotate_bone_for_retargeting (
     animation_clip: AnimationClip,
-    bone_match_pattern: string[], rotate_obj: Euler,
-    space: 'local' | 'world'): void {
+    bone_match_pattern: string[], rotate_obj: Euler): void {
     // Find all shoulder quaternion tracks (e.g., mixamorigLeftShoulder.quaternion)
     const tracks_to_change = animation_clip.tracks.filter(track =>
       bone_match_pattern.some(pattern => track.name.toLowerCase().includes(pattern.toLowerCase())) && track.name.includes('quaternion')
@@ -290,7 +289,7 @@ export class RetargetAnimationPreview extends EventTarget {
     if (tracks_to_change.length === 0) return
 
     // Object axis rotation amount. Final value is quaternion
-    let rotation_amount: Quaternion = new Quaternion().setFromEuler(rotate_obj)
+    const rotation_amount: Quaternion = new Quaternion().setFromEuler(rotate_obj)
 
     for (const track of tracks_to_change) {
       const name_info = this.parse_track_name(track.name)
@@ -305,23 +304,8 @@ export class RetargetAnimationPreview extends EventTarget {
           values[i + 3] // w
         )
 
-        // if the track is a left/right combo, we may need to invert the rotation on one side
-        // if there is no left/right info, this will be skipped and work as normal
-
-        if (name_info.bone_name.toLowerCase().includes('left')) {
-          rotation_amount = new Quaternion().setFromEuler(new Euler(-rotate_obj.x, -rotate_obj.y, -rotate_obj.z, 'XYZ'))
-        } else {
-          rotation_amount = new Quaternion().setFromEuler(rotate_obj) // original value brought in
-        }
-
-
-
-        // have an option with how to rotate things
-        if (space === 'local') {
-          original_quat.multiply(rotation_amount)
-        } else {
-          original_quat.premultiply(rotation_amount)
-        }
+        // apply local-space correction
+        original_quat.multiply(rotation_amount)
 
         values[i] = original_quat.x
         values[i + 1] = original_quat.y
@@ -331,32 +315,88 @@ export class RetargetAnimationPreview extends EventTarget {
     }
   }
 
+  private find_bone_by_name (root: Object3D, skinned_meshes: SkinnedMesh[], bone_name: string): Object3D | null {
+    let found_bone: Object3D | null = null
+
+    root.traverse((child) => {
+      if (found_bone !== null) return
+      if (child.name === bone_name) {
+        found_bone = child
+      }
+    })
+
+    if (found_bone !== null) return found_bone
+
+    skinned_meshes.forEach((mesh) => {
+      if (found_bone !== null) return
+      const match = mesh.skeleton?.bones.find((bone) => bone.name === bone_name)
+      if (match !== undefined) {
+        found_bone = match
+      }
+    })
+
+    return found_bone
+  }
+
   /**
-   * Apply Mixamo-specific corrections to retargeted animation
-   * Mixamo rigs don't have a root bone, so we need to rotate the hips by -90 degrees on X axis
+   * Calculate the rotation delta between source and target bones in bind pose
+   * @param source_bone_name - Name of the bone in the source skeleton
+   * @param target_bone_name - Name of the bone in the target skeleton
+   * @returns The rotation difference as a quaternion, or null if bones not found
+   */
+  private calculate_bone_rotation_delta (source_bone_name: string, target_bone_name: string): Quaternion | null {
+    // Get both skeleton roots
+    const source_armature = this.step_bone_mapping.get_source_armature()
+    const target_skeleton_data = this.step_bone_mapping.get_target_skeleton_data()
+
+    if (source_armature === null || target_skeleton_data === null) {
+      console.warn('Cannot calculate rotation delta: missing skeleton data')
+      return null
+    }
+
+    // Find source bone and target bone with normalized matching
+    const source_bone = this.find_bone_by_name(source_armature, [], source_bone_name)
+    const target_bone = this.find_bone_by_name(target_skeleton_data, this.target_skinned_meshes, target_bone_name)
+
+    if (source_bone === null || target_bone === null) {
+      const source_label = source_bone === null ? 'null' : source_bone.name
+      const target_label = target_bone === null ? 'null' : target_bone.name
+      console.debug(`Cannot calculate rotation delta: bone not found (source: ${source_bone_name}=${source_label}, target: ${target_bone_name}=${target_label})`)
+      return null
+    }
+
+    // Get quaternions from bind pose (local rotation)
+    const source_quat = new Quaternion().copy(source_bone.quaternion)
+    const target_quat = new Quaternion().copy(target_bone.quaternion)
+
+    // Calculate delta: target_inverse * source
+    const delta_quat = target_quat.clone().invert().multiply(source_quat)
+
+    return delta_quat
+  }
+
+  /**
+   * Apply Mixamo-specific corrections to retargeted animation by calculating rotation deltas
+   * between source and target bones in bind pose. Uses actual bone mappings instead of guessing names.
    */
   private apply_mixamo_corrections (animation_clip: AnimationClip): void {
-    // hips fix - Mixamo hips are rotated -90 degrees on X axis compared to M2M standard
-    // this hips rotation is temporary. It would be better to rotate the entire skinned mesh by -90 degrees on X axis
-    let rotation_amount: Euler = new Euler(this.deg_to_rad(-90), 0, 0, 'XYZ')
-    this.rotate_bone_for_retargeting(animation_clip, ['hips'], rotation_amount, 'world')
+    const bone_mappings = this.step_bone_mapping.get_bone_mapping()
 
-    // shoulder fix - Mixamo shoulders are rotated 180 degrees on X axis compared to M2M standard
-    rotation_amount = new Euler(0, this.deg_to_rad(-180), 0, 'XYZ')
-    this.rotate_bone_for_retargeting(animation_clip, ['shoulder'], rotation_amount, 'local')
+    bone_mappings.forEach((source_bone_name, target_bone_name) => {
+      const delta = this.calculate_bone_rotation_delta(source_bone_name, target_bone_name)
 
+      if (delta !== null) {
+        const delta_euler = new Euler().setFromQuaternion(delta)
 
-    // should fix 2 - Tilt shoulder back a bit along the Y axis
-    // rotation_amount = new Euler(this.deg_to_rad(30), 0, 0, 'XYZ')
-    // this.rotate_bone_for_retargeting(animation_clip, ['RightArm', 'LeftArm'], rotation_amount, 'local')
+        console.log(`Applying Mixamo correction for bone: ${target_bone_name}, delta Euler:`, delta_euler)
 
-    // upper arm fix - Mixamo upper arms are rotated 90 degrees on X axis compared to M2M standard
-    // rotation_amount = new Euler(0, this.deg_to_rad(90), 0, 'XYZ')
-    // this.rotate_bone_for_retargeting(animation_clip, ['RightArm', 'LeftArm'], rotation_amount, 'local')
+        this.rotate_bone_for_retargeting(animation_clip, [target_bone_name], delta_euler)
+      } else {
+        console.log(`Warning: delta is NULL when fixing bone roll. Skipping correction for bone: ${target_bone_name}`)
+      }
+    })
 
-
-
-    console.log('Applied Mixamo-specific corrections to retargeted animation', animation_clip)
+    console.log('Applied Mixamo-specific corrections to retargeted animation (dynamically calculated)', animation_clip)
   }
 
   // helps when specifying rotations in degrees with retargeting corrections

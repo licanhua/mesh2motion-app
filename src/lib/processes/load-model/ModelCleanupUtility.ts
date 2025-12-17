@@ -118,7 +118,6 @@ export class ModelCleanupUtility {
     // Find SkinnedMesh objects and preserve their complete bone hierarchy
     const skinned_meshes: SkinnedMesh[] = []
     model_data.traverse((child) => {
-      console.log('building out retargetable model data, inspecting child:', child)
       if (child.type === 'SkinnedMesh') {
         skinned_meshes.push(child as SkinnedMesh)
       }
