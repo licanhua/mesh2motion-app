@@ -1,4 +1,4 @@
-import { AnimationClip, AnimationMixer, type Scene, type SkinnedMesh, VectorKeyframeTrack, QuaternionKeyframeTrack, type AnimationAction, Quaternion, Euler, type Object3D } from 'three'
+import { AnimationClip, AnimationMixer, type Scene, type SkinnedMesh, VectorKeyframeTrack, QuaternionKeyframeTrack, type AnimationAction, Quaternion, Euler, type Object3D, Vector3 } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { SkeletonType } from '../lib/enums/SkeletonType.ts'
 import { AnimationUtility } from '../lib/processes/animations-listing/AnimationUtility.ts'
@@ -268,7 +268,7 @@ export class RetargetAnimationPreview extends EventTarget {
     // Apply Mixamo-specific corrections
     const target_mapping_type = this.step_bone_mapping.get_target_mapping_template()
     if (target_mapping_type === TargetBoneMappingType.Mixamo) {
-      this.apply_mixamo_corrections(retargeted_clip)
+      this.apply_bone_rotation_correction(retargeted_clip)
     }
 
     console.log(`Retargeted animation: ${source_clip.name} (${new_tracks.length} tracks)`)
@@ -339,12 +339,13 @@ export class RetargetAnimationPreview extends EventTarget {
   }
 
   /**
-   * Calculate the rotation delta between source and target bones in bind pose
+   * Calculate the bone roll delta between source and target bones in bind pose
+   * Bone roll is the rotation around the bone's primary axis (Y-axis in Three.js)
    * @param source_bone_name - Name of the bone in the source skeleton
    * @param target_bone_name - Name of the bone in the target skeleton
-   * @returns The rotation difference as a quaternion, or null if bones not found
+   * @returns The rotation difference as a quaternion (Y-axis only), or null if bones not found
    */
-  private calculate_bone_rotation_delta (source_bone_name: string, target_bone_name: string): Quaternion | null {
+ private calculate_bone_rotation_delta (source_bone_name: string, target_bone_name: string): Quaternion | null {
     // Get both skeleton roots
     const source_armature = this.step_bone_mapping.get_source_armature()
     const target_skeleton_data = this.step_bone_mapping.get_target_skeleton_data()
@@ -365,21 +366,26 @@ export class RetargetAnimationPreview extends EventTarget {
       return null
     }
 
-    // Get quaternions from bind pose (local rotation)
+    // Local-space bind pose quaternions
     const source_quat = new Quaternion().copy(source_bone.quaternion)
     const target_quat = new Quaternion().copy(target_bone.quaternion)
 
-    // Calculate delta: target_inverse * source
-    const delta_quat = target_quat.clone().invert().multiply(source_quat)
+    // Relative local delta (target -> source)
+    const full_delta_quat = target_quat.clone().invert().multiply(source_quat)
 
-    return delta_quat
+    // Extract only the twist around local Y (bone roll) via swing–twist decomposition
+    const axis_y = new Vector3(0, 1, 0)
+    const v = new Vector3(full_delta_quat.x, full_delta_quat.y, full_delta_quat.z)
+    const proj = axis_y.clone().multiplyScalar(v.dot(axis_y))
+    const twist_y = new Quaternion(proj.x, proj.y, proj.z, full_delta_quat.w).normalize()
+
+    return twist_y
   }
 
   /**
-   * Apply Mixamo-specific corrections to retargeted animation by calculating rotation deltas
-   * between source and target bones in bind pose. Uses actual bone mappings instead of guessing names.
+   * Apply bone rotation correction for fixing bone roll delta between target and source skeleton
    */
-  private apply_mixamo_corrections (animation_clip: AnimationClip): void {
+  private apply_bone_rotation_correction (animation_clip: AnimationClip): void {
     const bone_mappings = this.step_bone_mapping.get_bone_mapping()
 
     bone_mappings.forEach((source_bone_name, target_bone_name) => {
@@ -388,8 +394,6 @@ export class RetargetAnimationPreview extends EventTarget {
       if (delta !== null) {
         const delta_euler = new Euler().setFromQuaternion(delta)
 
-        console.log(`Applying Mixamo correction for bone: ${target_bone_name}, delta Euler:`, delta_euler)
-
         this.rotate_bone_for_retargeting(animation_clip, [target_bone_name], delta_euler)
       } else {
         console.log(`Warning: delta is NULL when fixing bone roll. Skipping correction for bone: ${target_bone_name}`)
@@ -397,11 +401,6 @@ export class RetargetAnimationPreview extends EventTarget {
     })
 
     console.log('Applied Mixamo-specific corrections to retargeted animation (dynamically calculated)', animation_clip)
-  }
-
-  // helps when specifying rotations in degrees with retargeting corrections
-  private deg_to_rad (deg: number): number {
-    return deg * Math.PI / 180
   }
 
   /**

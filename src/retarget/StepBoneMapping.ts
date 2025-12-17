@@ -163,12 +163,12 @@ export class StepBoneMapping extends EventTarget {
     if (this.source_bones_list === null) return
 
     const bone_names = this.get_source_bone_names()
-    
+
     // Update bone count display
     if (this.source_bone_count !== null) {
       this.source_bone_count.textContent = `(${bone_names.length})`
     }
-    
+
     if (bone_names.length === 0) {
       this.source_bones_list.innerHTML = '<em>No source skeleton loaded</em>'
       return
@@ -179,15 +179,15 @@ export class StepBoneMapping extends EventTarget {
       const bone_item = document.createElement('div')
       bone_item.textContent = name
       bone_item.className = 'bone-item bone-item-source'
-      
+
       // Make the bone draggable (source bones from Mesh2Motion skeleton)
       bone_item.draggable = true
       bone_item.dataset.boneName = name
-      
+
       // Add drag event listeners
       bone_item.addEventListener('dragstart', this.handle_drag_start.bind(this))
       bone_item.addEventListener('dragend', this.handle_drag_end.bind(this))
-      
+
       this.source_bones_list?.appendChild(bone_item)
     })
   }
@@ -196,12 +196,12 @@ export class StepBoneMapping extends EventTarget {
     if (this.target_bones_list === null) return
 
     const bone_names = this.get_target_bone_names()
-    
+
     // Update bone count display
     if (this.target_bone_count !== null) {
       this.target_bone_count.textContent = `(${bone_names.length})`
     }
-    
+
     if (bone_names.length === 0) {
       this.target_bones_list.innerHTML = '<em>No target skeleton loaded</em>'
       return
@@ -212,18 +212,17 @@ export class StepBoneMapping extends EventTarget {
       const bone_item = document.createElement('div')
       bone_item.className = 'bone-item bone-item-target'
       bone_item.dataset.targetBoneName = name
-      
+
       // Check if this target bone has a mapping
       const mapped_source_bone = this.bone_mapping.get(name)
       if (mapped_source_bone !== undefined) {
-       
         const source_name_span = document.createElement('span')
         source_name_span.textContent = mapped_source_bone
         source_name_span.className = 'mapping-source-name'
-        
+
         const target_name_span = document.createElement('span')
         target_name_span.textContent = name
-        
+
         bone_item.appendChild(source_name_span)
         bone_item.appendChild(target_name_span)
 
@@ -240,12 +239,12 @@ export class StepBoneMapping extends EventTarget {
       } else {
         bone_item.textContent = name
       }
-      
+
       // Make the bone a drop target (target bones from uploaded mesh)
       bone_item.addEventListener('dragover', this.handle_drag_over.bind(this))
       bone_item.addEventListener('dragleave', this.handle_drag_leave.bind(this))
       bone_item.addEventListener('drop', this.handle_drop.bind(this))
-      
+
       this.target_bones_list?.appendChild(bone_item)
     })
   }
@@ -254,7 +253,7 @@ export class StepBoneMapping extends EventTarget {
   private handle_drag_start (event: DragEvent): void {
     const target = event.target as HTMLElement
     const bone_name = target.dataset.boneName
-    
+
     if (bone_name !== undefined && event.dataTransfer !== null) {
       event.dataTransfer.effectAllowed = 'copy'
       event.dataTransfer.setData('text/plain', bone_name)
@@ -270,7 +269,7 @@ export class StepBoneMapping extends EventTarget {
   private handle_drag_over (event: DragEvent): void {
     event.preventDefault() // Allow drop
     const target = event.target as HTMLElement
-    
+
     // Visual feedback for drop zone
     if (event.dataTransfer !== null) {
       event.dataTransfer.dropEffect = 'copy'
@@ -287,20 +286,20 @@ export class StepBoneMapping extends EventTarget {
     event.preventDefault()
     const target = event.target as HTMLElement
     target.classList.remove('drag-over')
-    
+
     if (event.dataTransfer !== null) {
       const source_bone_name = event.dataTransfer.getData('text/plain')
       const target_bone_name = target.dataset.targetBoneName
-      
+
       if (source_bone_name !== '' && target_bone_name !== undefined) {
         // Update the mapping
         this.bone_mapping.set(target_bone_name, source_bone_name)
         console.log(`Mapped: ${target_bone_name} <- ${source_bone_name}`)
-        
+
         // Update the UI to show the mapping
         this.update_target_bones_list()
         this.update_clear_button_visibility()
-        
+
         // Dispatch event to notify of mapping change
         this.dispatchEvent(new CustomEvent('bone-mapping-updated', {
           detail: {
@@ -308,7 +307,7 @@ export class StepBoneMapping extends EventTarget {
             source_bone: source_bone_name
           }
         }))
-        
+
         // Dispatch event to notify about mapping state change
         this.dispatchEvent(new CustomEvent('bone-mappings-changed'))
       }
@@ -386,19 +385,8 @@ export class StepBoneMapping extends EventTarget {
     console.log(`Auto-mapped ${auto_mappings.size} bones:`, auto_mappings)
 
     // Update UI
-    this.polish_rig_after_bone_mappings()
     this.update_target_bones_list()
     this.update_clear_button_visibility()
     this.dispatchEvent(new CustomEvent('bone-mappings-changed'))
-  }
-
-  // some rig types don't have a root (like mixamo), so we need to rotate
-  // certain bones to get the model standing upright after retargeting
-  private polish_rig_after_bone_mappings (): void {
-    if (this.target_mapping_template === TargetBoneMappingType.Mixamo) {
-      console.log('Applying Mixamo rig polish adjustments since there is no root bone')
-      // for mixamo rigs, rotate the entire group by -90 degrees on X to get upright
-      // TODO: how to do this??
-    }
   }
 }

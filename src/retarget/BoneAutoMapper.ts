@@ -1,4 +1,4 @@
-import { Bone, Group, Object3D, SkinnedMesh } from 'three'
+import { Bone, Group, Object3D, Scene, SkinnedMesh } from 'three'
 import { BoneCategoryMapper } from './BoneCategoryMapper'
 import { MixamoMapper } from './MixamoMapper'
 import { TargetBoneMappingType } from './StepBoneMapping'
@@ -52,7 +52,7 @@ export class BoneAutoMapper {
    */
   public static auto_map_bones (
     source_armature: Object3D,
-    target_skeleton_data: Group,
+    target_skeleton_data: Scene,
     target_bone_mapping_type: TargetBoneMappingType
   ): Map<string, string> {
     // mappings: final output mapping of target bone name to source bone name
@@ -163,7 +163,7 @@ export class BoneAutoMapper {
    * @param target_skeleton_data - Target skeleton data group
    * @returns Map of bone name to parent bone name
    */
-  private static extract_target_bone_parent_map (target_skeleton_data: Group): Map<string, string | null> {
+  private static extract_target_bone_parent_map (target_skeleton_data: Scene): Map<string, string | null> {
     const parent_map = new Map<string, string | null>()
     const processed_bones = new Set<string>()
 
