@@ -1,7 +1,7 @@
 import { Group, type Object3D, type Object3DEventMap, type Scene, type SkinnedMesh } from 'three'
-import { SkeletonType } from '../lib/enums/SkeletonType.ts'
-import { BoneAutoMapper } from './BoneAutoMapper.ts'
-import { MixamoMapper } from './MixamoMapper.ts'
+import { SkeletonType } from '../../lib/enums/SkeletonType.ts'
+import { BoneAutoMapper } from '../BoneAutoMapper.ts'
+import { MixamoMapper } from '../MixamoMapper.ts'
 
 // when we are auto-mapping, keep track of what rig type we matched target against
 export enum TargetBoneMappingType {

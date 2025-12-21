@@ -1,8 +1,8 @@
 import { AnimationClip, AnimationMixer, Object3D, type Scene, type SkinnedMesh, VectorKeyframeTrack, QuaternionKeyframeTrack, type AnimationAction, Quaternion, Euler, Vector3 } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { AnimationUtility } from '../lib/processes/animations-listing/AnimationUtility.ts'
-import type { StepBoneMapping } from './StepBoneMapping.ts'
-import { TargetBoneMappingType } from './StepBoneMapping.ts'
+import type { StepBoneMapping } from './steps/StepBoneMapping.ts'
+import { TargetBoneMappingType } from './steps/StepBoneMapping.ts'
 import { RetargetUtils } from './RetargetUtils.ts'
 
 /**

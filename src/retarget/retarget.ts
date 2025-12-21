@@ -1,8 +1,8 @@
 import { Mesh2MotionEngine } from '../Mesh2MotionEngine.ts'
 import { type Group, type Object3DEventMap, Vector3 } from 'three'
-import { StepLoadSourceSkeleton } from './StepLoadSourceSkeleton.ts'
-import { StepLoadTargetModel } from './StepLoadTargetModel.ts'
-import { StepBoneMapping } from './StepBoneMapping.ts'
+import { StepLoadSourceSkeleton } from './steps/StepLoadSourceSkeleton.ts'
+import { StepLoadTargetModel } from './steps/StepLoadTargetModel.ts'
+import { StepBoneMapping } from './steps/StepBoneMapping.ts'
 import { RetargetAnimationPreview } from './RetargetAnimationPreview.ts'
 
 class RetargetModule {

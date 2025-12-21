@@ -1,7 +1,7 @@
 import { Bone, Group, Object3D, Scene, SkinnedMesh } from 'three'
 import { BoneCategoryMapper } from './BoneCategoryMapper'
 import { MixamoMapper } from './MixamoMapper'
-import { TargetBoneMappingType } from './StepBoneMapping'
+import { TargetBoneMappingType } from './steps/StepBoneMapping'
 
 /**
  * Bone categories for grouping bones by anatomical area

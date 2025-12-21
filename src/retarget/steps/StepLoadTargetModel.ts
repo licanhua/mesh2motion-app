@@ -1,7 +1,7 @@
 import { type Bone, Box3, type Group, type Object3DEventMap, type Scene, type SkinnedMesh, Vector3 } from 'three'
 import { type Mesh2MotionEngine } from '../Mesh2MotionEngine.ts'
-import { ModalDialog } from '../lib/ModalDialog.ts'
-import { RetargetUtils } from './RetargetUtils.ts'
+import { ModalDialog } from '../../lib/ModalDialog.ts'
+import { RetargetUtils } from '../RetargetUtils.ts'
 
 /**
  * Handles loading the target model (user-uploaded model) for retargeting
