@@ -40,63 +40,66 @@
 
         <!-- Tool Options Panel -->
         <div id="tool-panel">
-            <h1>Bring your own rigged model</h1>
 
-            <p>Instructions and information go here with what this page is for</p>
-            <div style="display: flex; flex-direction: row; gap: 1rem; margin-top: 1rem;">
-                <!-- Mesh2Motion skeleton (source) - draggable bones -->
-                <div class="bone-map-section">
-                    <h2 class="bone-map-heading">Mesh2Motion Skeleton (Source)</h2>
-                    <div class="bone-map-content">
-                        <div id="skeleton-selection-container" >
-                            <select id="skeleton-type-select" class="button">
-                                <option value="human" selected>Human</option>
-                                <option value="quadraped">Quadruped (Fox)</option>
-                                <option value="bird">Bird</option>
-                                <option value="dragon">Dragon</option>
-                            </select>
+            <!-- bone mapping step to hook up source and target rig -->
+            <span id="bone-mapping-step">
+                <h1>Bring your own rigged model</h1>
+
+                <p>Instructions and information go here with what this page is for</p>
+                <div style="display: flex; flex-direction: row; gap: 1rem; margin-top: 1rem;">
+                    <!-- Mesh2Motion skeleton (source) - draggable bones -->
+                    <div class="bone-map-section">
+                        <h2 class="bone-map-heading">Mesh2Motion Skeleton (Source)</h2>
+                        <div class="bone-map-content">
+                            <div id="skeleton-selection-container" >
+                                <select id="skeleton-type-select" class="button">
+                                    <option value="human" selected>Human</option>
+                                    <option value="quadraped">Quadruped (Fox)</option>
+                                    <option value="bird">Bird</option>
+                                    <option value="dragon">Dragon</option>
+                                </select>
+                            </div>
+                            
+                            <p>Bones List <span id="source-bone-count">(0)</span></p>
+                            <div id="source-bones-list">
+                                <p style="color: var(--text-secondary);">No source skeleton loaded</p>
+                            </div>
                         </div>
-                        
-                        <p>Bones List <span id="source-bone-count">(0)</span></p>
-                        <div id="source-bones-list">
-                            <p style="color: var(--text-secondary);">No source skeleton loaded</p>
-                        </div>
+
                     </div>
 
-                </div>
+                    <div style="align-self: center; font-size: 2rem; color: var(--text-secondary);">
+                        ⇨
+                    </div>  
 
-                <div style="align-self: center; font-size: 2rem; color: var(--text-secondary);">
-                    ⇨
-                </div>  
+                    <!-- imported 3d skinned mesh (target) - drop zone for bones -->
+                    <div class="bone-map-section">
+                        <p class="bone-map-heading">Your 3D Rig Model (Target)</p>
+                        <div class="bone-map-content">
+                            <div style="display: flex; gap: 0.5rem;">
+                                <!-- there are some issues going on with scaling the skeleton for FBX and other formats so we will start simple for now with just GLB files -->
+                                <input type="file" id="upload-file" accept=".glb, .fbx, .zip" style="display: none;" />
+                                <label for="upload-file" class="button" id="load-model-button">Upload Rig</label>
 
-                <!-- imported 3d skinned mesh (target) - drop zone for bones -->
-                <div class="bone-map-section">
-                    <p class="bone-map-heading">Your 3D Rig Model (Target)</p>
-                    <div class="bone-map-content">
-                        <div style="display: flex; gap: 0.5rem;">
-                            <!-- there are some issues going on with scaling the skeleton for FBX and other formats so we will start simple for now with just GLB files -->
-                            <input type="file" id="upload-file" accept=".glb, .fbx, .zip" style="display: none;" />
-                            <label for="upload-file" class="button" id="load-model-button">Upload Rig</label>
-
-                            <button id="auto-map-button" class="secondary-button" style="display: none;">Auto-Map Bones</button>
-                            <button id="clear-mappings-button" class="secondary-button" style="display: none;">Clear Mappings</button>
+                                <button id="auto-map-button" class="secondary-button" style="display: none;">Auto-Map Bones</button>
+                                <button id="clear-mappings-button" class="secondary-button" style="display: none;">Clear Mappings</button>
+                            </div>
+                            
+                            <p>Bones List  <span id="target-bone-count">(0)</span></p>
+                            <div id="target-bones-list">
+                                <p style="color: var(--text-secondary);">No target skeleton loaded</p>
+                            </div>
                         </div>
-                        
-                        <p>Bones List  <span id="target-bone-count">(0)</span></p>
-                        <div id="target-bones-list">
-                            <p style="color: var(--text-secondary);">No target skeleton loaded</p>
-                        </div>
+
                     </div>
-
                 </div>
-            </div>
 
-            <div style="display: flex; padding: 1rem; justify-content: flex-end;">
-                <button id="continue-to-listing-button" style="display: none">Continue</button>
-            </div>
+                <div style="display: flex; padding: 1rem; justify-content: flex-end;">
+                    <button id="continue-to-listing-button" style="display: none">Continue</button>
+                </div>
+            </span>
 
-            <!-- animation listings area -->
-             
+            <!-- animation listings area -->             
             <span id="skinned-step-animation-export-options">
 
                 <div id="animations-listing">
@@ -131,7 +134,7 @@
                             <span class="material-symbols-outlined" data-tippy-content="If your model uses an A-Pose, this will help expand/contract arms for all animations">help</span>
 
                             <button class="secondary-button" id="reset-a-pose-button">
-                                <img src="images/icons/reset.svg" alt="Reset A-Pose" width="20" height="20" />
+                                <img src="../images/icons/reset.svg" alt="Reset A-Pose" width="20" height="20" />
                             </button>
                         </div>
 
@@ -147,13 +150,13 @@
       
 
                     <div style="display: flex; gap: 0.5rem;">
-                        <button class="secondary-button" id="action_back_to_edit_skeleton" >&#x2039; Back</button>
+                        <button class="secondary-button" id="back_to_bone_map_button" >&#x2039; Back</button>
 
                         <!-- testing the mirroring options -->
                         <div class="styled-checkbox icon-toggle">
                             <input type="checkbox" id="mirror-animations-checkbox" name="mirror-animations" value="true" style="display:none;">
                             <label for="mirror-animations-checkbox" data-tippy-content="Mirror animations"  tabindex="0">
-                                <img src="images/icons/mirror.svg" alt="Mirror animations" width="30" height="30" />
+                                <img src="../images/icons/mirror.svg" alt="Mirror animations" width="30" height="30" />
                             </label>
                         </div>
 
@@ -162,7 +165,7 @@
                         <div class="styled-checkbox icon-toggle">
                             <input type="checkbox" id="show-skeleton-checkbox" name="show-skeleton" value="show" style="display:none;">
                             <label for="show-skeleton-checkbox" data-tippy-content="Show skeleton"  tabindex="0">
-                                <img src="images/icons/bone-display.svg" width="30" height="30" alt="Show skeleton" />
+                                <img src="../images/icons/bone-display.svg" width="30" height="30" alt="Show skeleton" />
                             </label>
                         </div>
 

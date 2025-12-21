@@ -13,6 +13,7 @@ class RetargetModule {
   private readonly retarget_animation_preview: RetargetAnimationPreview
 
   private continue_button: HTMLButtonElement | null
+  private back_to_bone_map_button: HTMLButtonElement | null = null
 
   constructor () {
     // Set up camera position similar to marketing bootstrap
@@ -54,6 +55,19 @@ class RetargetModule {
   }
 
   public add_event_listeners (): void {
+    // create button references
+    this.back_to_bone_map_button = document.getElementById('back_to_bone_map_button') as HTMLButtonElement
+    const bone_mapping_step = document.getElementById('bone-mapping-step')
+    const animation_export_options = document.getElementById('skinned-step-animation-export-options')
+
+    this.back_to_bone_map_button.onclick = () => {
+      // Hide the skinned-step-animation-export-options ID and show the bone-mapping-step ID
+      if (bone_mapping_step !== null && animation_export_options !== null) {
+        animation_export_options.style.display = 'none'
+        bone_mapping_step.style.display = 'inline'
+      }
+    }
+
     // Listen for source skeleton (Mesh2Motion) loaded
     this.step_load_source_skeleton.addEventListener('skeleton-loaded', () => {
       const source_armature = this.step_load_source_skeleton.get_loaded_source_armature()
@@ -75,8 +89,11 @@ class RetargetModule {
       this.continue_button = document.getElementById('continue-to-listing-button') as HTMLButtonElement
       this.continue_button.style.display = 'block'
       this.continue_button.onclick = () => {
-        // TODO: Hide the bone mapping panel and show the animation listing panel
-        console.log('Continue to animation listing clicked')
+        // Hide the bone-mapping-step ID and show the skinned-step-animation-export-options ID
+        if (bone_mapping_step !== null && animation_export_options !== null) {
+          bone_mapping_step.style.display = 'none'
+          animation_export_options.style.display = 'inline'
+        }
       }
     })
   }
