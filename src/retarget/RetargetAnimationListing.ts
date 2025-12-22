@@ -7,6 +7,7 @@ import type { ThemeManager } from '../lib/ThemeManager.ts'
 import { type TransformedAnimationClipPair } from '../lib/processes/animations-listing/interfaces/TransformedAnimationClipPair.ts'
 import { AnimationRetargetService } from './AnimationRetargetService.ts'
 import { type StepBoneMapping } from './steps/StepBoneMapping.ts'
+import { StepExportRetargetedAnimations } from './steps/StepExportRetargetedAnimations.ts'
 
 /**
  * RetargetAnimationListing - Handles animation listing and playback specifically for retargeting workflow
@@ -17,7 +18,7 @@ export class RetargetAnimationListing extends EventTarget {
   private readonly animation_player: AnimationPlayer
   private readonly animation_loader: AnimationLoader = new AnimationLoader()
   private readonly step_bone_mapping: StepBoneMapping
-
+  private readonly step_export_retargeted_animations: StepExportRetargetedAnimations = new StepExportRetargetedAnimations()
   private animation_clips_loaded: TransformedAnimationClipPair[] = []
   private animation_mixer: AnimationMixer = new AnimationMixer(new Object3D())
   private skinned_meshes_to_animate: SkinnedMesh[] = []
@@ -28,6 +29,8 @@ export class RetargetAnimationListing extends EventTarget {
   public animation_search: AnimationSearch | null = null
 
   private is_animations_active: boolean = false
+
+  private export_button: HTMLButtonElement | null = null
 
   constructor (theme_manager: ThemeManager, step_bone_mapping: StepBoneMapping) {
     super()
@@ -100,11 +103,11 @@ export class RetargetAnimationListing extends EventTarget {
    */
   private update_export_button_enabled_state (): void {
     // if there are no animations selected disable the download button
-    const export_button = document.getElementById('export-retargeting-button') as HTMLButtonElement | null
+
     const animations_selected_count: number = this.animation_search?.get_selected_animation_indices().length ?? 0
 
-    if (export_button !== null) {
-      export_button.disabled = animations_selected_count === 0
+    if (this.export_button !== null) {
+      this.export_button.disabled = animations_selected_count === 0
     }
 
     // update the count inside the export/download button
@@ -221,6 +224,16 @@ export class RetargetAnimationListing extends EventTarget {
     // Add any retarget-specific event listeners here
     // For now, keeping it minimal
     this.setup_animation_loop()
+
+    // configure export animations button
+    this.export_button = document.getElementById('export-retargeting-button') as HTMLButtonElement
+    this.export_button?.addEventListener('click', () => {
+      this.step_export_retargeted_animations.set_animation_clips_to_export(
+        this.animation_clips_loaded.map(clip => clip.display_animation_clip),
+        this.get_selected_animation_indices()
+      )
+      this.step_export_retargeted_animations.export(this.skinned_meshes_to_animate, 'retargeted_animations')
+    })
   }
 
   public get_animation_player (): AnimationPlayer {
