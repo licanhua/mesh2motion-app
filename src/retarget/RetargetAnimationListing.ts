@@ -78,9 +78,14 @@ export class RetargetAnimationListing extends EventTarget {
 
   public load_and_apply_default_animation_to_skinned_mesh (retarget_meshes: Scene): void {
     // load the Group skinned mesh and convert to normal SkinnedMesh array
-    this.skinned_meshes_to_animate = retarget_meshes.children.filter((child: Object3D) => {
-      return (child as SkinnedMesh).isSkinnedMesh
-    }) as SkinnedMesh[]
+    // the skinned meshes might be buried deep in the hierarchy, so traverse the scene
+    const skinned_meshes: SkinnedMesh[] = []
+    retarget_meshes.traverse((child: Object3D) => {
+      if ((child as SkinnedMesh).isSkinnedMesh) {
+        skinned_meshes.push(child as SkinnedMesh)
+      }
+    })
+    this.skinned_meshes_to_animate = skinned_meshes
 
     console.log(`Preparing to load animations for ${this.skinned_meshes_to_animate.length} skinned meshes`)
 
