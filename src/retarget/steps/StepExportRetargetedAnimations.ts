@@ -10,14 +10,12 @@ export class StepExportRetargetedAnimations extends EventTarget {
   // target_mapping_type is now managed by AnimationRetargetService singleton
   private target_skeleton_data: Scene | null = null
   private target_skinned_meshes: SkinnedMesh[] = []
-  private target_rig_scene: Scene | null = null
 
-  public setup_retargeting (target_rig_scene: Scene, meshes: SkinnedMesh[], bone_mapping: Map<string, string>,
+  public setup_retargeting (meshes: SkinnedMesh[], bone_mapping: Map<string, string>,
     skeleton_data: Scene | null): void {
     this.bone_mapping = bone_mapping
     this.target_skeleton_data = skeleton_data
     this.target_skinned_meshes = meshes
-    this.target_rig_scene = target_rig_scene
   }
 
   public set_animation_clips_to_export (all_animations_clips: AnimationClip[], animation_checkboxes: number[]): void {
@@ -35,11 +33,6 @@ export class StepExportRetargetedAnimations extends EventTarget {
       return
     }
 
-    if (this.target_rig_scene == null) {
-      console.log('ERROR: target rig scene is null, cannot export')
-      return
-    }
-
     // Retarget all animation clips before export
     let retargeted_clips: AnimationClip[] = []
     retargeted_clips = this.animation_clips_to_export.map((clip) =>
@@ -51,7 +44,8 @@ export class StepExportRetargetedAnimations extends EventTarget {
     )
     console.log('Retargeted animation clips:', retargeted_clips)
 
-    this.export_glb(this.target_rig_scene, retargeted_clips, filename)
+    const target_rig_scene: Scene = AnimationRetargetService.getInstance().get_target_armature()
+    this.export_glb(target_rig_scene, retargeted_clips, filename)
       .then(() => {
         console.log('Exported GLB successfully')
       })

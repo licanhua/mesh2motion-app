@@ -1,7 +1,7 @@
 import { AnimationPlayer } from '../lib/processes/animations-listing/AnimationPlayer.ts'
 import { AnimationSearch } from '../lib/processes/animations-listing/AnimationSearch.ts'
 import { AnimationLoader } from '../lib/processes/animations-listing/AnimationLoader.ts'
-import { type AnimationClip, AnimationMixer, type SkinnedMesh, Object3D, type Scene, type AnimationAction } from 'three'
+import { type AnimationClip, AnimationMixer, type SkinnedMesh, Object3D, type AnimationAction } from 'three'
 import type { ThemeManager } from '../lib/ThemeManager.ts'
 import { type TransformedAnimationClipPair } from '../lib/processes/animations-listing/interfaces/TransformedAnimationClipPair.ts'
 import { AnimationRetargetService } from './AnimationRetargetService.ts'
@@ -29,7 +29,6 @@ export class RetargetAnimationListing extends EventTarget {
 
   private is_animations_active: boolean = false
 
-  private target_rig_scene: Scene | null = null
   private export_button: HTMLButtonElement | null = null
 
   constructor (theme_manager: ThemeManager, step_bone_mapping: StepBoneMapping) {
@@ -74,14 +73,11 @@ export class RetargetAnimationListing extends EventTarget {
     this.is_animations_active = false
   }
 
-  public load_and_apply_default_animation_to_skinned_mesh (retarget_meshes: Scene): void {
-    // we will need this later when exporting
-    this.target_rig_scene = retarget_meshes
-
+  public load_and_apply_default_animation_to_skinned_mesh (): void {
     // load the Group skinned mesh and convert to normal SkinnedMesh array
     // the skinned meshes might be buried deep in the hierarchy, so traverse the scene
     const skinned_meshes: SkinnedMesh[] = []
-    retarget_meshes.traverse((child: Object3D) => {
+    AnimationRetargetService.getInstance().get_target_armature().traverse((child: Object3D) => {
       if ((child as SkinnedMesh).isSkinnedMesh) {
         skinned_meshes.push(child as SkinnedMesh)
       }
@@ -240,17 +236,12 @@ export class RetargetAnimationListing extends EventTarget {
       )
 
       // configure the export out step with retargeting info
-      if (this.target_rig_scene !== null) {
-        this.step_export_retargeted_animations.setup_retargeting(
-          this.target_rig_scene,
-          this.skinned_meshes_to_animate,
-          this.step_bone_mapping.get_bone_mapping(),
-          this.step_bone_mapping.get_target_skeleton_data()
-        )
-        this.step_export_retargeted_animations.export('retargeted_animations')
-      } else {
-        console.error('Target rig scene is null, cannot export retargeted animations.')
-      }
+      this.step_export_retargeted_animations.setup_retargeting(
+        this.skinned_meshes_to_animate,
+        this.step_bone_mapping.get_bone_mapping(),
+        this.step_bone_mapping.get_target_skeleton_data()
+      )
+      this.step_export_retargeted_animations.export('retargeted_animations')
     })
   }
 

@@ -95,13 +95,13 @@ class RetargetModule {
 
     // Listen for target model (user-uploaded) loaded
     this.step_load_target_model.addEventListener('target-model-loaded', (_event: Event) => {
-      const retargetable_armature: Scene | null = this.step_load_target_model.get_retargetable_meshes()
+      const temp_target_armature: Scene | null = this.step_load_target_model.get_retargetable_meshes()
 
-      if (retargetable_armature == null) {
+      if (temp_target_armature == null) {
         console.error('No retargetable meshes found in the uploaded model.')
         return
       }
-      AnimationRetargetService.getInstance().set_target_armature(retargetable_armature)
+      AnimationRetargetService.getInstance().set_target_armature(temp_target_armature)
       // Set target skeleton data in bone mapping (uploaded mesh)
       this.step_bone_mapping.target_armature_updated()
       this.start_live_preview()
@@ -132,14 +132,8 @@ class RetargetModule {
       this.animation_listing_step.begin()
       this.mesh2motion_engine.show_animation_player(true)
 
-      const retargetable_meshes: Scene | null = this.step_load_target_model.get_retargetable_meshes()
-
-      if (retargetable_meshes !== null) {
-        this.animation_listing_step.load_and_apply_default_animation_to_skinned_mesh(retargetable_meshes)
-        this.animation_listing_step.start_preview()
-      } else {
-        console.error('Retargetable meshes are null while processing click button.')
-      }
+      this.animation_listing_step.load_and_apply_default_animation_to_skinned_mesh()
+      this.animation_listing_step.start_preview()
     }
   }
 
