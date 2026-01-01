@@ -1,4 +1,4 @@
-import { type Scene, type SkinnedMesh, type AnimationClip } from 'three'
+import { type Scene, type AnimationClip } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter'
 import { AnimationRetargetService } from '../AnimationRetargetService'
 
@@ -7,15 +7,9 @@ export class StepExportRetargetedAnimations extends EventTarget {
 
   // Retargeting-related properties
   private bone_mapping = new Map<string, string>()
-  // target_mapping_type is now managed by AnimationRetargetService singleton
-  private target_skeleton_data: Scene | null = null
-  private target_skinned_meshes: SkinnedMesh[] = []
 
-  public setup_retargeting (meshes: SkinnedMesh[], bone_mapping: Map<string, string>,
-    skeleton_data: Scene | null): void {
+  public setup_retargeting (bone_mapping: Map<string, string>): void {
     this.bone_mapping = bone_mapping
-    this.target_skeleton_data = skeleton_data
-    this.target_skinned_meshes = meshes
   }
 
   public set_animation_clips_to_export (all_animations_clips: AnimationClip[], animation_checkboxes: number[]): void {
@@ -38,8 +32,7 @@ export class StepExportRetargetedAnimations extends EventTarget {
     retargeted_clips = this.animation_clips_to_export.map((clip) =>
       AnimationRetargetService.getInstance().retarget_animation_clip(
         clip,
-        this.bone_mapping,
-        this.target_skinned_meshes // use the meshes being exported as the target
+        this.bone_mapping
       )
     )
     console.log('Retargeted animation clips:', retargeted_clips)

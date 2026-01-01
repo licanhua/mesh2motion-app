@@ -18,7 +18,7 @@ export interface TrackNameParts {
 export class AnimationRetargetService {
   private static instance: AnimationRetargetService | null = null
 
-  // #region Central Data Properties
+  // #region GETTER/SETTER
   /**
    * Get/set for the skeleton type. This will be the source of truth
    * for other classes to grab this data
@@ -26,6 +26,7 @@ export class AnimationRetargetService {
   private source_armature: Group = new Group()
   private skeleton_type: SkeletonType = SkeletonType.None
   private target_armature: Scene = new Scene()
+  private target_skinned_meshes: SkinnedMesh[] = []
   private target_mapping_type: TargetBoneMappingType = TargetBoneMappingType.None
 
   public set_source_armature (armature: Group): void {
@@ -36,8 +37,20 @@ export class AnimationRetargetService {
     return this.source_armature
   }
 
-  public set_target_armature (armature: Scene): void {
-    this.target_armature = armature
+  public set_target_armature (new_armature: Scene): void {
+    this.target_armature = new_armature
+
+    // re-calculate skinned meshes from target armature scene
+    this.target_skinned_meshes = []
+    this.target_armature.traverse((child) => {
+      if (child.type === 'SkinnedMesh') {
+        this.target_skinned_meshes.push(child as SkinnedMesh)
+      }
+    })
+  }
+
+  public get_target_skinned_meshes (): SkinnedMesh[] {
+    return this.target_skinned_meshes
   }
 
   public get_target_armature (): Scene {
@@ -75,14 +88,11 @@ export class AnimationRetargetService {
    * Retarget an animation clip using bone mappings
    * @param source_clip - The original animation clip from the source skeleton
    * @param bone_mappings - Map of target bone name -> source bone name
-   * @param target_armature - The target skeleton data (for bone rotation corrections)
-   * @param target_skinned_meshes - The target skinned meshes (for finding bones)
    * @returns A new animation clip retargeted for the target skeleton
    */
   public retarget_animation_clip (
     source_clip: AnimationClip,
-    bone_mappings: Map<string, string>,
-    target_skinned_meshes: SkinnedMesh[] = []
+    bone_mappings: Map<string, string>
   ): AnimationClip {
     const new_tracks: any[] = [] // store new retargeted tracks
 
@@ -125,8 +135,7 @@ export class AnimationRetargetService {
     if (this.target_mapping_type === TargetBoneMappingType.Mixamo) {
       this.apply_bone_rotation_correction(
         retargeted_clip,
-        bone_mappings,
-        target_skinned_meshes
+        bone_mappings
       )
     }
 
@@ -156,14 +165,12 @@ export class AnimationRetargetService {
    */
   private apply_bone_rotation_correction (
     animation_clip: AnimationClip,
-    bone_mappings: Map<string, string>,
-    target_skinned_meshes: SkinnedMesh[]
+    bone_mappings: Map<string, string>
   ): void {
     bone_mappings.forEach((source_bone_name, target_bone_name) => {
       const delta = this.calculate_bone_rotation_delta(
         source_bone_name,
-        target_bone_name,
-        target_skinned_meshes
+        target_bone_name
       )
 
       if (delta !== null) {
@@ -190,8 +197,7 @@ export class AnimationRetargetService {
    */
   private calculate_bone_rotation_delta (
     source_bone_name: string,
-    target_bone_name: string,
-    target_skinned_meshes: SkinnedMesh[]
+    target_bone_name: string
   ): Quaternion | null {
     if (this.source_armature === null || this.target_armature === null) {
       console.warn('Cannot calculate rotation delta: missing skeleton data')
@@ -200,7 +206,7 @@ export class AnimationRetargetService {
 
     // Find source bone and target bone with normalized matching
     const source_bone = this.find_bone_by_name(this.source_armature, [], source_bone_name)
-    const target_bone = this.find_bone_by_name(this.target_armature, target_skinned_meshes, target_bone_name)
+    const target_bone = this.find_bone_by_name(this.target_armature, this.target_skinned_meshes, target_bone_name)
 
     if (source_bone === null || target_bone === null) {
       const source_label = source_bone === null ? 'null' : source_bone.name
