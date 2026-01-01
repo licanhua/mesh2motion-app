@@ -48,11 +48,11 @@ export class BoneAutoMapper {
   /**
    * Attempts to automatically map source bones (Mesh2Motion) to target bones (uploaded mesh)
    * @param source_armature - Source skeleton armature (Mesh2Motion skeleton)
-   * @param target_skeleton_data - Target skeleton data (uploaded mesh)
+   * @param target_armature - Target skeleton armature (uploaded mesh)
    * @returns Map of target bone name -> source bone name
    */
   public static auto_map_bones (
-    target_skeleton_data: Scene,
+    target_armature: Scene,
     target_bone_mapping_type: TargetBoneMappingType
   ): Map<string, string> {
     // mappings: final output mapping of target bone name to source bone name
@@ -69,7 +69,7 @@ export class BoneAutoMapper {
     // this also contains the parent bone relationship
     // which will help us later when doing auto-mapping calculations
     const source_parent_map: Map<string, string | null> = BoneAutoMapper.extract_source_bone_parent_map(source_armature)
-    const target_parent_map: Map<string, string | null> = BoneAutoMapper.extract_target_bone_parent_map(target_skeleton_data)
+    const target_parent_map: Map<string, string | null> = BoneAutoMapper.extract_target_bone_parent_map(target_armature)
 
     // Create metadata for both source and target bones
     const source_bones_meta: BoneMetadata[] = BoneAutoMapper.create_all_bone_metadata(source_parent_map)

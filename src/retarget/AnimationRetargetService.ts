@@ -1,6 +1,6 @@
 import {
   AnimationClip, Euler, type Object3D, Quaternion, QuaternionKeyframeTrack, Vector3,
-  VectorKeyframeTrack, type Scene, type Group, type SkinnedMesh
+  VectorKeyframeTrack, Scene, Group, type SkinnedMesh
 } from 'three'
 import { RetargetUtils } from './RetargetUtils.ts'
 import { TargetBoneMappingType } from './steps/StepBoneMapping.ts'
@@ -23,22 +23,41 @@ export class AnimationRetargetService {
    * Get/set for the skeleton type. This will be the source of truth
    * for other classes to grab this data
    */
-  private source_armature: Group | null = null
-  public set_source_armature (armature: Group | null): void {
+  private source_armature: Group = new Group()
+  private skeleton_type: SkeletonType = SkeletonType.None
+  private target_armature: Scene = new Scene()
+  private target_mapping_type: TargetBoneMappingType = TargetBoneMappingType.None
+
+  public set_source_armature (armature: Group): void {
     this.source_armature = armature
   }
 
-  public get_source_armature (): Group | null {
+  public get_source_armature (): Group {
     return this.source_armature
   }
 
-  private skeleton_type: SkeletonType = SkeletonType.None
+  public set_target_armature (armature: Scene): void {
+    this.target_armature = armature
+  }
+
+  public get_target_armature (): Scene {
+    return this.target_armature
+  }
+
   public set_skeleton_type (type: SkeletonType): void {
     this.skeleton_type = type
   }
 
   public get_skeleton_type (): SkeletonType {
     return this.skeleton_type
+  }
+
+  public set_target_mapping_type (type: TargetBoneMappingType): void {
+    this.target_mapping_type = type
+  }
+
+  public get_target_mapping_type (): TargetBoneMappingType {
+    return this.target_mapping_type
   }
 
   // #endregion
@@ -51,31 +70,18 @@ export class AnimationRetargetService {
     }
     return AnimationRetargetService.instance
   }
+
   /**
    * Retarget an animation clip using bone mappings
    * @param source_clip - The original animation clip from the source skeleton
    * @param bone_mappings - Map of target bone name -> source bone name
-   * @param target_mapping_type - The type of target skeleton mapping (for applying corrections)
-   * @param source_armature - The source skeleton armature (for bone rotation corrections)
-   * @param target_skeleton_data - The target skeleton data (for bone rotation corrections)
+   * @param target_armature - The target skeleton data (for bone rotation corrections)
    * @param target_skinned_meshes - The target skinned meshes (for finding bones)
    * @returns A new animation clip retargeted for the target skeleton
    */
-
-  private target_mapping_type: TargetBoneMappingType = TargetBoneMappingType.None
-
-  public set_target_mapping_type (type: TargetBoneMappingType): void {
-    this.target_mapping_type = type
-  }
-
-  public get_target_mapping_type (): TargetBoneMappingType {
-    return this.target_mapping_type
-  }
-
   public retarget_animation_clip (
     source_clip: AnimationClip,
     bone_mappings: Map<string, string>,
-    target_skeleton_data: Scene | null = null,
     target_skinned_meshes: SkinnedMesh[] = []
   ): AnimationClip {
     const new_tracks: any[] = [] // store new retargeted tracks
@@ -120,7 +126,6 @@ export class AnimationRetargetService {
       this.apply_bone_rotation_correction(
         retargeted_clip,
         bone_mappings,
-        target_skeleton_data,
         target_skinned_meshes
       )
     }
@@ -152,14 +157,12 @@ export class AnimationRetargetService {
   private apply_bone_rotation_correction (
     animation_clip: AnimationClip,
     bone_mappings: Map<string, string>,
-    target_skeleton_data: Scene | null,
     target_skinned_meshes: SkinnedMesh[]
   ): void {
     bone_mappings.forEach((source_bone_name, target_bone_name) => {
       const delta = this.calculate_bone_rotation_delta(
         source_bone_name,
         target_bone_name,
-        target_skeleton_data,
         target_skinned_meshes
       )
 
@@ -181,24 +184,23 @@ export class AnimationRetargetService {
    * @param source_bone_name - Name of the bone in the source skeleton
    * @param target_bone_name - Name of the bone in the target skeleton
    * @param source_armature - The source skeleton armature
-   * @param target_skeleton_data - The target skeleton data
+   * @param target_armature - The target skeleton data
    * @param target_skinned_meshes - The target skinned meshes
    * @returns The rotation difference as a quaternion (Y-axis only), or null if bones not found
    */
   private calculate_bone_rotation_delta (
     source_bone_name: string,
     target_bone_name: string,
-    target_skeleton_data: Scene | null,
     target_skinned_meshes: SkinnedMesh[]
   ): Quaternion | null {
-    if (this.source_armature === null || target_skeleton_data === null) {
+    if (this.source_armature === null || this.target_armature === null) {
       console.warn('Cannot calculate rotation delta: missing skeleton data')
       return null
     }
 
     // Find source bone and target bone with normalized matching
     const source_bone = this.find_bone_by_name(this.source_armature, [], source_bone_name)
-    const target_bone = this.find_bone_by_name(target_skeleton_data, target_skinned_meshes, target_bone_name)
+    const target_bone = this.find_bone_by_name(this.target_armature, target_skinned_meshes, target_bone_name)
 
     if (source_bone === null || target_bone === null) {
       const source_label = source_bone === null ? 'null' : source_bone.name

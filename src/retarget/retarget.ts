@@ -1,11 +1,12 @@
 import { Mesh2MotionEngine } from '../Mesh2MotionEngine.ts'
-import { type Group, type Object3DEventMap, Scene, Vector3 } from 'three'
+import { type Group, type Scene, Vector3 } from 'three'
 import { StepLoadSourceSkeleton } from './steps/StepLoadSourceSkeleton.ts'
 import { StepLoadTargetModel } from './steps/StepLoadTargetModel.ts'
 import { StepBoneMapping } from './steps/StepBoneMapping.ts'
 import { RetargetAnimationPreview } from './RetargetAnimationPreview.ts'
 import { RetargetAnimationListing } from './RetargetAnimationListing.ts'
 import { AnimationRetargetService } from './AnimationRetargetService'
+import { type SkeletonType } from '../lib/enums/SkeletonType.ts'
 
 class RetargetModule {
   private readonly mesh2motion_engine: Mesh2MotionEngine
@@ -82,20 +83,27 @@ class RetargetModule {
 
     // Listen for source skeleton (Mesh2Motion) loaded
     this.step_load_source_skeleton.addEventListener('skeleton-loaded', () => {
-      const source_armature = this.step_load_source_skeleton.get_loaded_source_armature() as import('three').Group
-      const skeleton_type = this.step_load_source_skeleton.get_skeleton_type()
-      const anim_service = AnimationRetargetService.getInstance()
-      anim_service.set_skeleton_type(skeleton_type)
-      anim_service.set_source_armature(source_armature)
-      this.step_bone_mapping.set_source_skeleton_data()
+      // the load step stores the scene and skeleton type internally. grab the data here
+      const source_armature: Group = this.step_load_source_skeleton.get_loaded_source_armature() as Group
+      const skeleton_type: SkeletonType = this.step_load_source_skeleton.get_skeleton_type()
+
+      // animation service keeps track of shared data across classes
+      AnimationRetargetService.getInstance().set_source_armature(source_armature)
+      AnimationRetargetService.getInstance().set_skeleton_type(skeleton_type)
+      this.step_bone_mapping.source_armature_updated()
     })
 
     // Listen for target model (user-uploaded) loaded
     this.step_load_target_model.addEventListener('target-model-loaded', (_event: Event) => {
-      const retargetable_meshes: Scene | null = this.step_load_target_model.get_retargetable_meshes()
+      const retargetable_armature: Scene | null = this.step_load_target_model.get_retargetable_meshes()
 
+      if (retargetable_armature == null) {
+        console.error('No retargetable meshes found in the uploaded model.')
+        return
+      }
+      AnimationRetargetService.getInstance().set_target_armature(retargetable_armature)
       // Set target skeleton data in bone mapping (uploaded mesh)
-      this.step_bone_mapping.set_target_skeleton_data(retargetable_meshes)
+      this.step_bone_mapping.target_armature_updated()
       this.start_live_preview()
 
       // Show "Continue" button to proceed to animation listing

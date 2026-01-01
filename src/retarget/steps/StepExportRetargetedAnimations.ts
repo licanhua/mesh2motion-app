@@ -1,7 +1,6 @@
-import { type Scene, type SkinnedMesh, type AnimationClip, type Group } from 'three'
+import { type Scene, type SkinnedMesh, type AnimationClip } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter'
 import { AnimationRetargetService } from '../AnimationRetargetService'
-import { TargetBoneMappingType } from './StepBoneMapping'
 
 export class StepExportRetargetedAnimations extends EventTarget {
   public animation_clips_to_export: AnimationClip[] = []
@@ -47,7 +46,6 @@ export class StepExportRetargetedAnimations extends EventTarget {
       AnimationRetargetService.getInstance().retarget_animation_clip(
         clip,
         this.bone_mapping,
-        this.target_skeleton_data,
         this.target_skinned_meshes // use the meshes being exported as the target
       )
     )

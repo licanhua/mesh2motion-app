@@ -2,7 +2,6 @@ import { AnimationPlayer } from '../lib/processes/animations-listing/AnimationPl
 import { AnimationSearch } from '../lib/processes/animations-listing/AnimationSearch.ts'
 import { AnimationLoader } from '../lib/processes/animations-listing/AnimationLoader.ts'
 import { type AnimationClip, AnimationMixer, type SkinnedMesh, Object3D, type Scene, type AnimationAction } from 'three'
-import type { SkeletonType } from '../lib/enums/SkeletonType.ts'
 import type { ThemeManager } from '../lib/ThemeManager.ts'
 import { type TransformedAnimationClipPair } from '../lib/processes/animations-listing/interfaces/TransformedAnimationClipPair.ts'
 import { AnimationRetargetService } from './AnimationRetargetService.ts'
@@ -209,8 +208,6 @@ export class RetargetAnimationListing extends EventTarget {
     const retargeted_clip: AnimationClip = AnimationRetargetService.getInstance().retarget_animation_clip(
       display_clip,
       bone_mappings,
-      this.step_bone_mapping.get_target_mapping_template(),
-      this.step_bone_mapping.get_target_skeleton_data(),
       this.skinned_meshes_to_animate
     )
 
@@ -248,7 +245,6 @@ export class RetargetAnimationListing extends EventTarget {
           this.target_rig_scene,
           this.skinned_meshes_to_animate,
           this.step_bone_mapping.get_bone_mapping(),
-          this.step_bone_mapping.get_target_mapping_template(),
           this.step_bone_mapping.get_target_skeleton_data()
         )
         this.step_export_retargeted_animations.export('retargeted_animations')

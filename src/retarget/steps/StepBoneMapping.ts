@@ -1,5 +1,4 @@
-import { Group, type Object3D, type Object3DEventMap, type Scene, type SkinnedMesh } from 'three'
-import { SkeletonType } from '../../lib/enums/SkeletonType.ts'
+import { type Scene, type SkinnedMesh } from 'three'
 import { BoneAutoMapper } from '../bone-automap/BoneAutoMapper.ts'
 import { MixamoMapper } from '../bone-automap/MixamoMapper.ts'
 import { AnimationRetargetService } from '../AnimationRetargetService.ts'
@@ -15,8 +14,6 @@ export enum TargetBoneMappingType {
 
 export class StepBoneMapping extends EventTarget {
   private readonly _main_scene: Scene
-  private target_skeleton_data: Scene | null = null
-  private target_mapping_template: TargetBoneMappingType = TargetBoneMappingType.None
 
   // DOM references
   private source_bones_list: HTMLDivElement | null = null
@@ -73,14 +70,12 @@ export class StepBoneMapping extends EventTarget {
     }
   }
 
-  public set_source_skeleton_data (): void {
+  public source_armature_updated (): void {
     this.update_source_bones_list()
     this.update_auto_map_button_visibility()
   }
 
-  public set_target_skeleton_data (skeleton_data: Scene | null): void {
-    this.target_skeleton_data = skeleton_data
-    console.log('Target skeleton data set in bone mapping:', this.target_skeleton_data)
+  public target_armature_updated (): void {
     this.update_target_bones_list()
     this.update_auto_map_button_visibility()
   }
@@ -90,7 +85,7 @@ export class StepBoneMapping extends EventTarget {
   }
 
   public has_target_skeleton (): boolean {
-    return this.target_skeleton_data !== null
+    return AnimationRetargetService.getInstance().get_target_armature() !== null
   }
 
   public has_both_skeletons (): boolean {
@@ -99,11 +94,7 @@ export class StepBoneMapping extends EventTarget {
 
   // Getters
   public get_target_skeleton_data (): Scene | null {
-    return this.target_skeleton_data
-  }
-
-  public get_target_mapping_template (): TargetBoneMappingType {
-    return this.target_mapping_template
+    return AnimationRetargetService.getInstance().get_target_armature()
   }
 
   // Extract bone names from source skeleton (Mesh2Motion skeleton)
@@ -124,7 +115,8 @@ export class StepBoneMapping extends EventTarget {
 
   // Extract bone names from target skeleton (uploaded mesh)
   public get_target_bone_names (): string[] {
-    if (this.target_skeleton_data === null) {
+    const target_armature = AnimationRetargetService.getInstance().get_target_armature()
+    if (target_armature === null) {
       return []
     }
 
@@ -135,7 +127,7 @@ export class StepBoneMapping extends EventTarget {
 
     // Target skeleton data contains SkinnedMesh objects with skeleton property
     // Use Set to avoid duplicates when multiple SkinnedMesh share the same skeleton
-    this.target_skeleton_data.traverse((child) => {
+    target_armature.traverse((child) => {
       if (child.type === 'SkinnedMesh') {
         const skinned_mesh = child as SkinnedMesh
         const skeleton = skinned_mesh.skeleton
@@ -362,20 +354,15 @@ export class StepBoneMapping extends EventTarget {
 
     // see if target bones follow a known template
     if (MixamoMapper.is_target_valid_skeleton(this.get_target_bone_names())) {
-      this.target_mapping_template = TargetBoneMappingType.Mixamo
+      AnimationRetargetService.getInstance().set_target_mapping_type(TargetBoneMappingType.Mixamo)
     } else {
-      this.target_mapping_template = TargetBoneMappingType.Custom
-    }
-
-    if (this.target_skeleton_data === null) {
-      console.error('Target skeleton data is null during auto-mapping')
-      return
+      AnimationRetargetService.getInstance().set_target_mapping_type(TargetBoneMappingType.Custom)
     }
 
     // Use BoneAutoMapper to generate mappings
     const auto_mappings = BoneAutoMapper.auto_map_bones(
-      this.target_skeleton_data,
-      this.target_mapping_template
+      AnimationRetargetService.getInstance().get_target_armature(),
+      AnimationRetargetService.getInstance().get_target_mapping_type()
     )
 
     // Apply the auto-generated mappings
