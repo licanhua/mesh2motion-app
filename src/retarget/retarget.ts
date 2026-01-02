@@ -21,7 +21,7 @@ class RetargetModule {
   constructor () {
     // Set up camera position similar to marketing bootstrap
     this.mesh2motion_engine = new Mesh2MotionEngine()
-    const camera_position = new Vector3().set(0, 1.7, 5)
+    const camera_position = new Vector3().set(3, 2, 15)
     this.mesh2motion_engine.set_camera_position(camera_position)
 
     // Override zoom limits for retargeting to accommodate models of various sizes
@@ -65,9 +65,6 @@ class RetargetModule {
         bone_mapping_step.style.display = 'inline'
       }
 
-      // show the skeleton helper again since we hid it while on the animation listing step
-      this.step_load_source_skeleton.show_skeleton_helper(true)
-
       // stop the animation listing step
       if (this.animation_listing_step !== null) {
         this.animation_listing_step.stop_preview()
@@ -98,7 +95,12 @@ class RetargetModule {
         console.error('No retargetable meshes found in the uploaded model.')
         return
       }
+
       AnimationRetargetService.getInstance().set_target_armature(temp_target_armature)
+
+      // hide the skeleton helper since we are on that step
+      this.step_load_source_skeleton.show_skeleton_helper(false)
+
       // Set target skeleton data in bone mapping (uploaded mesh)
       this.step_bone_mapping.target_armature_updated()
       this.start_live_preview()
@@ -123,8 +125,7 @@ class RetargetModule {
 
       // load the animation listing step and start it
       this.animation_listing_step = new RetargetAnimationListing(
-        this.mesh2motion_engine.get_theme_manager(),
-        this.step_bone_mapping
+        this.mesh2motion_engine.get_theme_manager()
       )
       this.animation_listing_step.begin()
       this.mesh2motion_engine.show_animation_player(true)
