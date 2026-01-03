@@ -44,17 +44,18 @@ export class CustomFBXLoader extends EventDispatcher {
         ).show()
       }
 
-      this.loader.load(
-        url,
-        (fbx) => {
-          loaded_fbx = fbx
-          has_finished_loading_fbx = true
-          check_if_complete()
-        },
-        undefined, // onProgress callback
-        (error) => {
-          reject(error)
-        }
+      this.loader.load(url, (fbx) => {
+        // FBX files are often in centimeters, scale down to meters
+        // scale down to normalize to 1 unit = 1 meter
+        fbx.scale.set(0.01, 0.01, 0.01)
+        loaded_fbx = fbx
+        has_finished_loading_fbx = true
+        check_if_complete()
+      },
+      undefined, // onProgress callback
+      (error) => {
+        reject(error)
+      }
       )
 
       // check for image loading errors
@@ -65,4 +66,3 @@ export class CustomFBXLoader extends EventDispatcher {
     })
   }
 }
-
