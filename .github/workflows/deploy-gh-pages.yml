@@ -52,6 +52,7 @@ jobs:
       - name: Build
         run: pnpm run build
         env:
+          GITHUB_PAGES: true
           CLOUDFLARE_COMMIT_SHA: ${{ github.sha }}
           CLOUDFLARE_BRANCH: ${{ github.ref_name }}
 
