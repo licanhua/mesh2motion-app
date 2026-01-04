@@ -10,21 +10,18 @@ import { AnimationRetargetService } from './AnimationRetargetService.ts'
  * loading and playing animations while applying bone mappings in real-time
  */
 export class RetargetAnimationPreview extends EventTarget {
-  private readonly _main_scene: Scene
   private readonly step_bone_mapping: StepBoneMapping
   private readonly gltf_loader: GLTFLoader = new GLTFLoader()
 
   private animation_mixer: AnimationMixer | null = null
   private current_animation_clip: AnimationClip | null = null
   private retargeted_animation_clip: AnimationClip | null = null
-  private target_skinned_meshes: SkinnedMesh[] = []
 
   private is_preview_active: boolean = false
   private has_added_event_listeners: boolean = false
 
-  constructor (main_scene: Scene, step_bone_mapping: StepBoneMapping) {
+  constructor (step_bone_mapping: StepBoneMapping) {
     super()
-    this._main_scene = main_scene
     this.step_bone_mapping = step_bone_mapping
   }
 
@@ -63,25 +60,6 @@ export class RetargetAnimationPreview extends EventTarget {
       return
     }
 
-    const target_skeleton_data = this.step_bone_mapping.get_target_skeleton_data()
-    if (target_skeleton_data === null) {
-      console.log('Cannot start preview: target skeleton data is null')
-      return
-    }
-
-    // Extract skinned meshes from target skeleton data
-    this.target_skinned_meshes = []
-    target_skeleton_data.traverse((child) => {
-      if (child.type === 'SkinnedMesh') {
-        this.target_skinned_meshes.push(child as SkinnedMesh)
-      }
-    })
-
-    if (this.target_skinned_meshes.length === 0) {
-      console.log('Cannot start preview: no skinned meshes found in target')
-      return
-    }
-
     // Create animation mixer for the target skeleton
     // Use a dummy Object3D as root since we apply animations directly to skinned meshes
     // there are often more than one skinned mesh we want to animate at a time
@@ -113,7 +91,7 @@ export class RetargetAnimationPreview extends EventTarget {
    */
   private async load_first_animation (): Promise<void> {
     // get location of animation file to load that has preview animations
-    const source_skeleton_type = this.step_bone_mapping.get_source_skeleton_type()
+    const source_skeleton_type = AnimationRetargetService.getInstance().get_skeleton_type()
     const animation_file_path = RetargetUtils.get_animation_file_path(source_skeleton_type)
 
     if (animation_file_path === null) {
@@ -124,7 +102,8 @@ export class RetargetAnimationPreview extends EventTarget {
     // if we are coming back to this step and already loaded a default animation, skip reloading
     // and just do the playing
     if (this.current_animation_clip !== null) {
-    
+      this.play_default_animation()
+      return
     }
 
     try {
@@ -172,22 +151,9 @@ export class RetargetAnimationPreview extends EventTarget {
     // Stop any currently playing animation
     this.animation_mixer.stopAllAction()
 
-    // Get current bone mappings
-    const bone_mappings = this.step_bone_mapping.get_bone_mapping()
-
-    if (bone_mappings.size === 0) {
-      console.log('No bone mappings yet, skipping animation retarget')
-      return
-    }
-
     // Create retargeted animation clip using shared service
-    this.retargeted_animation_clip = AnimationRetargetService.retarget_animation_clip(
-      this.current_animation_clip,
-      bone_mappings,
-      this.step_bone_mapping.get_target_mapping_template(),
-      this.step_bone_mapping.get_source_armature(),
-      this.step_bone_mapping.get_target_skeleton_data(),
-      this.target_skinned_meshes
+    this.retargeted_animation_clip = AnimationRetargetService.getInstance().retarget_animation_clip(
+      this.current_animation_clip
     )
 
     this.play_default_animation()
@@ -205,7 +171,8 @@ export class RetargetAnimationPreview extends EventTarget {
     }
 
     // Apply the retargeted animation to all target skinned meshes
-    this.target_skinned_meshes.forEach((skinned_mesh) => {
+    const skinned_meshes: SkinnedMesh[] = AnimationRetargetService.getInstance().get_target_skinned_meshes()
+    skinned_meshes.forEach((skinned_mesh) => {
       const action: AnimationAction = this.animation_mixer.clipAction(this.retargeted_animation_clip, skinned_mesh)
       action.reset()
       action.play() // should loop automatically
@@ -236,7 +203,8 @@ export class RetargetAnimationPreview extends EventTarget {
 
     // CRITICAL: Update the skeleton and skinned meshes after animation changes the bones
     // Why do I need this when I don't need it in the main Mesh2Motion engine?
-    this.target_skinned_meshes.forEach((skinned_mesh) => {
+    const skinned_meshes: SkinnedMesh[] = AnimationRetargetService.getInstance().get_target_skinned_meshes()
+    skinned_meshes.forEach((skinned_mesh) => {
       skinned_mesh.skeleton.bones.forEach(bone => {
         bone.updateMatrixWorld(true)
       })

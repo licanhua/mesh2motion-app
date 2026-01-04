@@ -2,6 +2,7 @@ import { Bone, Group, Object3D, Scene, SkinnedMesh } from 'three'
 import { BoneCategoryMapper } from './BoneCategoryMapper'
 import { MixamoMapper } from './MixamoMapper'
 import { TargetBoneMappingType } from '../steps/StepBoneMapping'
+import { AnimationRetargetService } from '../AnimationRetargetService'
 
 /**
  * Bone categories for grouping bones by anatomical area
@@ -47,26 +48,32 @@ export class BoneAutoMapper {
   /**
    * Attempts to automatically map source bones (Mesh2Motion) to target bones (uploaded mesh)
    * @param source_armature - Source skeleton armature (Mesh2Motion skeleton)
-   * @param target_skeleton_data - Target skeleton data (uploaded mesh)
+   * @param target_armature - Target skeleton armature (uploaded mesh)
    * @returns Map of target bone name -> source bone name
    */
-  public static auto_map_bones (
-    source_armature: Group,
-    target_skeleton_data: Scene,
-    target_bone_mapping_type: TargetBoneMappingType
-  ): Map<string, string> {
+  public static auto_map_bones (): Map<string, string> {
     // mappings: final output mapping of target bone name to source bone name
     let mappings = new Map<string, string>()
 
-    // Extract bone data from both skeletons
-    // this also contains the parent bone relationship
-    // which will help us later when doing auto-mapping calculations
-    const source_parent_map: Map<string, string | null> = this.extract_source_bone_parent_map(source_armature)
-    const target_parent_map: Map<string, string | null> = this.extract_target_bone_parent_map(target_skeleton_data)
+    // Traverse source skeleton to build parent-child relationships
+    const source_armature: Group | null = AnimationRetargetService.getInstance().get_source_armature()
+    if (source_armature === null) {
+      console.error('Source armature is null while extracting bone parent map.')
+      return new Map<string, string>()
+    }
 
     // Create metadata for both source and target bones
-    const source_bones_meta: BoneMetadata[] = this.create_all_bone_metadata(source_parent_map)
-    const target_bones_meta: BoneMetadata[] = this.create_all_bone_metadata(target_parent_map)
+    const retarget_service: AnimationRetargetService = AnimationRetargetService.getInstance()
+    let source_bones_meta: BoneMetadata[] = []
+    let target_bones_meta: BoneMetadata[] = []
+
+    if (retarget_service.get_source_armature().children.length > 0) {
+      source_bones_meta = BoneAutoMapper.create_all_bone_metadata(retarget_service.get_source_armature(), true)
+    }
+
+    if (retarget_service.get_target_armature().children.length > 0) {
+      target_bones_meta = BoneAutoMapper.create_all_bone_metadata(retarget_service.get_target_armature(), false)
+    }
 
     console.log('\n=== FINAL BONE METADATA ===')
     console.log('Source bones metadata:', source_bones_meta)
@@ -74,7 +81,7 @@ export class BoneAutoMapper {
 
     // if the target is a mixamo rig and our skeleton type is human, we can do a direct name mapping
     // without worrying about guessing
-    if (target_bone_mapping_type === TargetBoneMappingType.Mixamo) {
+    if (retarget_service.get_target_mapping_type() === TargetBoneMappingType.Mixamo) {
       console.log('Target skeleton appears to be a Mixamo rig, performing direct name mapping...')
       mappings = MixamoMapper.map_mixamo_bones(source_bones_meta, target_bones_meta)
       return mappings
@@ -140,62 +147,50 @@ export class BoneAutoMapper {
   }
 
   /**
-   * Extract parent relationships for source skeleton (Mesh2Motion armature)
-   * @param source_armature - Source skeleton armature
-   * @returns Map of bone name -> parent bone name (or null if root)
-   */
-  private static extract_source_bone_parent_map (source_armature: Group): Map<string, string | null> {
-    const parent_map = new Map<string, string | null>()
-
-    // Traverse source skeleton to build parent-child relationships
-    source_armature.traverse((child: Object3D) => {
-      if (child.type === 'Bone') {
-        const bone = child
-        const parent_name = (bone.parent != null && bone.parent.type === 'Bone') ? bone.parent.name : null
-        parent_map.set(bone.name, parent_name)
-      }
-    })
-
-    return parent_map
-  }
-
-  /**
-   * Extract parent relationships for target skeleton (uploaded mesh)
-   * @param target_skeleton_data - Target skeleton data
-   * @returns Map of bone name -> parent bone name (or null if root)
-   */
-  private static extract_target_bone_parent_map (target_skeleton_data: Scene): Map<string, string | null> {
-    const parent_map = new Map<string, string | null>()
-
-    // Traverse all SkinnedMesh objects in the target skeleton data
-    target_skeleton_data.traverse((child: Object3D) => {
-      if (child.type === 'SkinnedMesh') {
-        const skinned_mesh = child as SkinnedMesh
-
-        // For each bone in the skeleton, record parent relationship
-        for (const bone of skinned_mesh.skeleton.bones) {
-          const parent_name = (bone.parent != null && bone.parent.type === 'Bone') ? bone.parent.name : null
-          parent_map.set(bone.name, parent_name)
-        }
-      }
-    })
-
-    return parent_map
-  }
-
-  /**
    * Create metadata objects for all bones from a parent map
    * @param parent_map - Map of bone name -> parent bone name
    * @returns Array of BoneMetadata for all bones
    */
-  private static create_all_bone_metadata (parent_map: Map<string, string | null>): BoneMetadata[] {
+  private static create_all_bone_metadata (armature: Group | Scene, is_source_skeleton: boolean): BoneMetadata[] {
     const metadata_list: BoneMetadata[] = []
+    const bones: Bone[] = []
 
-    for (const [bone_name, parent_name] of parent_map.entries()) {
+    // the source M2M skeleton is a Group that contains a lot of bones...but no Skinned Meshes, 
+    // so just traverse the tree and build the bone list directly
+    if (is_source_skeleton) {
+      armature.traverse((child: Object3D) => {
+        if (child.type === 'Bone') {
+          bones.push(child as Bone)
+        }
+      })
+    } else {
+      // if we find multiple skinned meshes, we will log a warning. Probably won't be an issue, but just putting
+      // this in there for now
+      let skinned_mesh_found: boolean = false
+      let skinned_mesh: SkinnedMesh | null = null
+      armature.traverse((child: Object3D) => {
+        if (child.type === 'SkinnedMesh') {
+          if (skinned_mesh_found) {
+            console.log('create_all_bone_metadata(): Multiple SkinnedMesh objects found in armature. Only processing the first one.')
+            return
+          }
+          skinned_mesh_found = true
+          skinned_mesh = child as SkinnedMesh
+        }
+      })
+
+      if (skinned_mesh !== null) {
+        bones.push(...(skinned_mesh as SkinnedMesh).skeleton.bones)
+      }
+    }
+
+    // create metadata for each bone
+    for (const bone of bones) {
+      const bone_name: string = bone.name
+      const parent_name: string | null = (bone.parent !== null) ? bone.parent.name : null
       const normalized_name: string = this.normalize_bone_name(bone_name)
       const side: BoneSide = this.detect_bone_side(bone_name)
       const category: BoneCategory = this.detect_bone_category(normalized_name)
-
       const metadata: BoneMetadata = {
         name: bone_name,
         normalized_name,
@@ -203,7 +198,6 @@ export class BoneAutoMapper {
         category,
         parent_name
       }
-
       metadata_list.push(metadata)
     }
 
@@ -257,19 +251,23 @@ export class BoneAutoMapper {
    * Detect anatomical category based on normalized bone name and parent relationships
    */
   private static detect_bone_category (normalized_name: string): BoneCategory {
-    if (normalized_name.includes('spine') || normalized_name.includes('chest') || normalized_name.includes('neck') || normalized_name.includes('head') || normalized_name.includes('hips')) {
+    if (normalized_name.includes('spine') || normalized_name.includes('chest') || normalized_name.includes('neck') ||
+      normalized_name.includes('head') || normalized_name.includes('hips')) {
       return BoneCategory.Torso
     }
 
-    if (normalized_name.includes('shoulder') || normalized_name.includes('upperarm') || normalized_name.includes('forearm') || normalized_name.includes('hand') || normalized_name.includes('wrist')) {
+    if (normalized_name.includes('shoulder') || normalized_name.includes('upperarm') ||
+      normalized_name.includes('forearm') || normalized_name.includes('hand') || normalized_name.includes('wrist')) {
       return BoneCategory.Arms
     }
 
-    if (normalized_name.includes('thumb') || normalized_name.includes('index') || normalized_name.includes('middle') || normalized_name.includes('ring') || normalized_name.includes('pinky')) {
+    if (normalized_name.includes('thumb') || normalized_name.includes('index') || normalized_name.includes('middle') ||
+      normalized_name.includes('ring') || normalized_name.includes('pinky')) {
       return BoneCategory.Hands
     }
 
-    if (normalized_name.includes('thigh') || normalized_name.includes('shin') || normalized_name.includes('knee') || normalized_name.includes('foot') || normalized_name.includes('toe') || normalized_name.includes('calf')) {
+    if (normalized_name.includes('thigh') || normalized_name.includes('shin') || normalized_name.includes('knee') ||
+      normalized_name.includes('foot') || normalized_name.includes('toe') || normalized_name.includes('calf')) {
       return BoneCategory.Legs
     }
 

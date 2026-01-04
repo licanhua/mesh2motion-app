@@ -1,28 +1,9 @@
-import { type Object3D, Scene, type SkinnedMesh, type AnimationClip, type Group } from 'three'
+import { type Scene, type AnimationClip } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter'
 import { AnimationRetargetService } from '../AnimationRetargetService'
-import { TargetBoneMappingType } from './StepBoneMapping'
 
 export class StepExportRetargetedAnimations extends EventTarget {
   public animation_clips_to_export: AnimationClip[] = []
-
-  // Retargeting-related properties
-  private bone_mapping = new Map<string, string>()
-  private target_mapping_type: TargetBoneMappingType = TargetBoneMappingType.None
-  private source_armature: Group | null = null
-  private target_skeleton_data: Scene | null = null
-  private target_skinned_meshes: SkinnedMesh[] = []
-  private target_rig_scene: Scene | null = null
-
-  public setup_retargeting (target_rig_scene: Scene, meshes: SkinnedMesh[], bone_mapping: Map<string, string>,
-    mapping_type: TargetBoneMappingType, armature: Group, skeleton_data: Scene | null): void {
-    this.bone_mapping = bone_mapping
-    this.target_mapping_type = mapping_type
-    this.source_armature = armature
-    this.target_skeleton_data = skeleton_data
-    this.target_skinned_meshes = meshes
-    this.target_rig_scene = target_rig_scene
-  }
 
   public set_animation_clips_to_export (all_animations_clips: AnimationClip[], animation_checkboxes: number[]): void {
     this.animation_clips_to_export = []
@@ -39,26 +20,15 @@ export class StepExportRetargetedAnimations extends EventTarget {
       return
     }
 
-    if (this.target_rig_scene == null) {
-      console.log('ERROR: target rig scene is null, cannot export')
-      return
-    }
-
     // Retarget all animation clips before export
     let retargeted_clips: AnimationClip[] = []
     retargeted_clips = this.animation_clips_to_export.map((clip) =>
-      AnimationRetargetService.retarget_animation_clip(
-        clip,
-        this.bone_mapping,
-        this.target_mapping_type,
-        this.source_armature,
-        this.target_skeleton_data,
-        this.target_skinned_meshes // use the meshes being exported as the target
-      )
+      AnimationRetargetService.getInstance().retarget_animation_clip(clip)
     )
     console.log('Retargeted animation clips:', retargeted_clips)
 
-    this.export_glb(this.target_rig_scene, retargeted_clips, filename)
+    const target_rig_scene: Scene = AnimationRetargetService.getInstance().get_target_armature()
+    this.export_glb(target_rig_scene, retargeted_clips, filename)
       .then(() => {
         console.log('Exported GLB successfully')
       })
@@ -97,11 +67,6 @@ export class StepExportRetargetedAnimations extends EventTarget {
     })
   }
 
-  /**
-   * 
-   * @param blob 
-   * @param filename 
-   */
   private save_file (blob: Blob, filename: string): void {
     const export_button_hidden_link: HTMLAnchorElement | null = document.querySelector('#download-hidden-link')
     if (export_button_hidden_link != null) {

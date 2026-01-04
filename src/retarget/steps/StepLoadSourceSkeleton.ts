@@ -119,9 +119,9 @@ export class StepLoadSourceSkeleton extends EventTarget {
     this.loaded_source_armature = gltf.scene.clone() as Group
     this.loaded_source_armature.name = 'Source Skeleton Scene (Mesh2Motion)'
 
-    // Offset position to the side so it's visible next to the target skeleton
-    this.loaded_source_armature.position.set(2.5, 0, 0)
-    this.loaded_source_armature.updateWorldMatrix(true, true)
+    // potentially offset position of skeleton helper. Not in use for now
+    // this.loaded_source_armature.position.set(2.5, 0, 0)
+    // this.loaded_source_armature.updateWorldMatrix(true, true)
 
     console.log('Source skeleton (Mesh2Motion) loaded successfully:', this.loaded_source_armature)
 

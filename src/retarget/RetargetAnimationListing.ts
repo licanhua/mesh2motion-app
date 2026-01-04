@@ -1,12 +1,10 @@
 import { AnimationPlayer } from '../lib/processes/animations-listing/AnimationPlayer.ts'
 import { AnimationSearch } from '../lib/processes/animations-listing/AnimationSearch.ts'
 import { AnimationLoader } from '../lib/processes/animations-listing/AnimationLoader.ts'
-import { type AnimationClip, AnimationMixer, type SkinnedMesh, Object3D, type Scene, type AnimationAction } from 'three'
-import { SkeletonType } from '../lib/enums/SkeletonType.ts'
+import { type AnimationClip, AnimationMixer, type SkinnedMesh, Object3D, type AnimationAction } from 'three'
 import type { ThemeManager } from '../lib/ThemeManager.ts'
 import { type TransformedAnimationClipPair } from '../lib/processes/animations-listing/interfaces/TransformedAnimationClipPair.ts'
 import { AnimationRetargetService } from './AnimationRetargetService.ts'
-import { type StepBoneMapping } from './steps/StepBoneMapping.ts'
 import { StepExportRetargetedAnimations } from './steps/StepExportRetargetedAnimations.ts'
 
 /**
@@ -17,14 +15,9 @@ export class RetargetAnimationListing extends EventTarget {
   private readonly theme_manager: ThemeManager
   private readonly animation_player: AnimationPlayer
   private readonly animation_loader: AnimationLoader = new AnimationLoader()
-  private readonly step_bone_mapping: StepBoneMapping
   private readonly step_export_retargeted_animations: StepExportRetargetedAnimations = new StepExportRetargetedAnimations()
   private animation_clips_loaded: TransformedAnimationClipPair[] = []
   private animation_mixer: AnimationMixer = new AnimationMixer(new Object3D())
-
-  private skinned_meshes_to_animate: SkinnedMesh[] = []
-
-  private skeleton_type: SkeletonType = SkeletonType.Human
 
   private _added_event_listeners: boolean = false
 
@@ -32,19 +25,15 @@ export class RetargetAnimationListing extends EventTarget {
 
   private is_animations_active: boolean = false
 
-  private target_rig_scene: Scene | null = null
   private export_button: HTMLButtonElement | null = null
 
-  constructor (theme_manager: ThemeManager, step_bone_mapping: StepBoneMapping) {
+  constructor (theme_manager: ThemeManager) {
     super()
     this.theme_manager = theme_manager
     this.animation_player = new AnimationPlayer()
-    this.step_bone_mapping = step_bone_mapping
   }
 
-  public begin (skeleton_type: SkeletonType): void {
-    this.skeleton_type = skeleton_type
-
+  public begin (): void {
     this.reset_step_data()
 
     if (!this._added_event_listeners) {
@@ -55,7 +44,6 @@ export class RetargetAnimationListing extends EventTarget {
 
   public reset_step_data (): void {
     this.animation_clips_loaded = []
-    this.skinned_meshes_to_animate = []
     this.animation_mixer = new AnimationMixer(new Object3D())
     this.animation_player.clear_animation()
   }
@@ -77,29 +65,26 @@ export class RetargetAnimationListing extends EventTarget {
 
   public stop_preview (): void {
     this.is_animations_active = false
+
+    // Stop all active animations in the mixer
+    // this is really important if we go back to the bone mapping
+    // this makes sure to stop any running animations in listing
+    if (this.animation_mixer !== null) {
+      this.animation_mixer.stopAllAction()
+    }
+
+    // Clear the animation player UI
+    this.animation_player.clear_animation()
   }
 
-  public load_and_apply_default_animation_to_skinned_mesh (retarget_meshes: Scene): void {
-    // we will need this later when exporting
-    this.target_rig_scene = retarget_meshes
-
-    // load the Group skinned mesh and convert to normal SkinnedMesh array
-    // the skinned meshes might be buried deep in the hierarchy, so traverse the scene
-    const skinned_meshes: SkinnedMesh[] = []
-    retarget_meshes.traverse((child: Object3D) => {
-      if ((child as SkinnedMesh).isSkinnedMesh) {
-        skinned_meshes.push(child as SkinnedMesh)
-      }
-    })
-    this.skinned_meshes_to_animate = skinned_meshes
-
-    console.log(`Preparing to load animations for ${this.skinned_meshes_to_animate.length} skinned meshes`)
-
+  public load_and_apply_default_animation_to_skinned_mesh (): void {
     this.animation_loader.set_animations_file_path('../../animations/')
     this.animation_clips_loaded = []
     this.animation_mixer = new AnimationMixer(new Object3D())
 
-    this.animation_loader.load_animations(this.skeleton_type)
+    // this animation loader comes from the Mesh2Motion engine, so still
+    // pass in the skeleton type this way
+    this.animation_loader.load_animations(AnimationRetargetService.getInstance().get_skeleton_type())
       .then((loaded_clips: TransformedAnimationClipPair[]) => {
         this.animation_clips_loaded = loaded_clips
         this.on_all_animations_loaded()
@@ -165,7 +150,7 @@ export class RetargetAnimationListing extends EventTarget {
       'animation-filter',
       'animations-items',
       this.theme_manager,
-      this.skeleton_type
+      AnimationRetargetService.getInstance().get_skeleton_type()
     )
 
     this.animation_search.initialize_animations(animation_clips)
@@ -199,26 +184,14 @@ export class RetargetAnimationListing extends EventTarget {
     // Stop all current actions
     this.animation_mixer.stopAllAction()
 
-    // Get bone mappings from the bone mapping step
-    const bone_mappings = this.step_bone_mapping.get_bone_mapping()
-
-    if (bone_mappings.size === 0) {
-      console.warn('No bone mappings available. Cannot play retargeted animation.')
-      return
-    }
-
     // Retarget the animation using the shared service
-    const retargeted_clip: AnimationClip = AnimationRetargetService.retarget_animation_clip(
-      display_clip,
-      bone_mappings,
-      this.step_bone_mapping.get_target_mapping_template(),
-      this.step_bone_mapping.get_source_armature(),
-      this.step_bone_mapping.get_target_skeleton_data(),
-      this.skinned_meshes_to_animate
+    const retargeted_clip: AnimationClip = AnimationRetargetService.getInstance().retarget_animation_clip(
+      display_clip
     )
 
     // Create new actions for each skinned mesh with the retargeted animation
-    const actions: AnimationAction[] = this.skinned_meshes_to_animate.map((mesh) => {
+    const skinned_meshes_to_animate: SkinnedMesh[] = AnimationRetargetService.getInstance().get_target_skinned_meshes()
+    const actions: AnimationAction[] = skinned_meshes_to_animate.map((mesh) => {
       const action = this.animation_mixer.clipAction(retargeted_clip, mesh)
       action.reset()
       action.play()
@@ -246,14 +219,6 @@ export class RetargetAnimationListing extends EventTarget {
       )
 
       // configure the export out step with retargeting info
-      this.step_export_retargeted_animations.setup_retargeting(
-        this.target_rig_scene,
-        this.skinned_meshes_to_animate,
-        this.step_bone_mapping.get_bone_mapping(),
-        this.step_bone_mapping.get_target_mapping_template(),
-        this.step_bone_mapping.get_source_armature(),
-        this.step_bone_mapping.get_target_skeleton_data()
-      )
       this.step_export_retargeted_animations.export('retargeted_animations')
     })
   }
@@ -290,11 +255,11 @@ export class RetargetAnimationListing extends EventTarget {
     this.animation_player.update(delta_time)
 
     // CRITICAL: Update the skeleton and skinned meshes after animation changes the bones
-    // Why do I need this when I don't need it in the main Mesh2Motion engine?
-    this.skinned_meshes_to_animate.forEach((skinned_mesh) => {
-      skinned_mesh.skeleton.bones.forEach(bone => {
-        bone.updateMatrixWorld(true)
-      })
-    })
+    // const skinned_meshes: SkinnedMesh[] = AnimationRetargetService.getInstance().get_target_skinned_meshes()
+    // skinned_meshes.forEach((skinned_mesh) => {
+    //   skinned_mesh.skeleton.bones.forEach(bone => {
+    //     bone.updateMatrixWorld(true)
+    //   })
+    // })
   }
 }

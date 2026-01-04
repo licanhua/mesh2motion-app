@@ -1,10 +1,12 @@
 import { Mesh2MotionEngine } from '../Mesh2MotionEngine.ts'
-import { type Group, type Object3DEventMap, Scene, Vector3 } from 'three'
+import { type Group, type Scene, Vector3 } from 'three'
 import { StepLoadSourceSkeleton } from './steps/StepLoadSourceSkeleton.ts'
 import { StepLoadTargetModel } from './steps/StepLoadTargetModel.ts'
 import { StepBoneMapping } from './steps/StepBoneMapping.ts'
 import { RetargetAnimationPreview } from './RetargetAnimationPreview.ts'
 import { RetargetAnimationListing } from './RetargetAnimationListing.ts'
+import { AnimationRetargetService } from './AnimationRetargetService'
+import { type SkeletonType } from '../lib/enums/SkeletonType.ts'
 
 class RetargetModule {
   private readonly mesh2motion_engine: Mesh2MotionEngine
@@ -19,7 +21,7 @@ class RetargetModule {
   constructor () {
     // Set up camera position similar to marketing bootstrap
     this.mesh2motion_engine = new Mesh2MotionEngine()
-    const camera_position = new Vector3().set(0, 1.7, 5)
+    const camera_position = new Vector3().set(3, 2, 15)
     this.mesh2motion_engine.set_camera_position(camera_position)
 
     // Override zoom limits for retargeting to accommodate models of various sizes
@@ -35,13 +37,10 @@ class RetargetModule {
     this.step_load_target_model = new StepLoadTargetModel(this.mesh2motion_engine)
 
     // Initialize bone mapping step
-    this.step_bone_mapping = new StepBoneMapping(this.mesh2motion_engine.get_scene())
+    this.step_bone_mapping = new StepBoneMapping()
 
     // Initialize animation preview
-    this.retarget_animation_preview = new RetargetAnimationPreview(
-      this.mesh2motion_engine.get_scene(),
-      this.step_bone_mapping
-    )
+    this.retarget_animation_preview = new RetargetAnimationPreview(this.step_bone_mapping)
   }
 
   public init (): void {
@@ -66,9 +65,6 @@ class RetargetModule {
         bone_mapping_step.style.display = 'inline'
       }
 
-      // show the skeleton helper again since we hid it while on the animation listing step
-      this.step_load_source_skeleton.show_skeleton_helper(true)
-
       // stop the animation listing step
       if (this.animation_listing_step !== null) {
         this.animation_listing_step.stop_preview()
@@ -81,18 +77,32 @@ class RetargetModule {
 
     // Listen for source skeleton (Mesh2Motion) loaded
     this.step_load_source_skeleton.addEventListener('skeleton-loaded', () => {
-      const source_armature = this.step_load_source_skeleton.get_loaded_source_armature()
-      const skeleton_type = this.step_load_source_skeleton.get_skeleton_type()
+      // the load step stores the scene and skeleton type internally. grab the data here
+      const source_armature: Group = this.step_load_source_skeleton.get_loaded_source_armature() as Group
+      const skeleton_type: SkeletonType = this.step_load_source_skeleton.get_skeleton_type()
 
-      this.step_bone_mapping.set_source_skeleton_data(source_armature, skeleton_type)
+      // animation service keeps track of shared data across classes
+      AnimationRetargetService.getInstance().set_source_armature(source_armature)
+      AnimationRetargetService.getInstance().set_skeleton_type(skeleton_type)
+      this.step_bone_mapping.source_armature_updated()
     })
 
     // Listen for target model (user-uploaded) loaded
     this.step_load_target_model.addEventListener('target-model-loaded', (_event: Event) => {
-      const retargetable_meshes: Scene | null = this.step_load_target_model.get_retargetable_meshes()
+      const temp_target_armature: Scene | null = this.step_load_target_model.get_retargetable_meshes()
+
+      if (temp_target_armature == null) {
+        console.error('No retargetable meshes found in the uploaded model.')
+        return
+      }
+
+      AnimationRetargetService.getInstance().set_target_armature(temp_target_armature)
+
+      // hide the skeleton helper since we are on that step
+      this.step_load_source_skeleton.show_skeleton_helper(false)
 
       // Set target skeleton data in bone mapping (uploaded mesh)
-      this.step_bone_mapping.set_target_skeleton_data(retargetable_meshes)
+      this.step_bone_mapping.target_armature_updated()
       this.start_live_preview()
 
       // Show "Continue" button to proceed to animation listing
@@ -115,20 +125,13 @@ class RetargetModule {
 
       // load the animation listing step and start it
       this.animation_listing_step = new RetargetAnimationListing(
-        this.mesh2motion_engine.get_theme_manager(),
-        this.step_bone_mapping
+        this.mesh2motion_engine.get_theme_manager()
       )
-      this.animation_listing_step.begin(this.step_load_source_skeleton.get_skeleton_type())
+      this.animation_listing_step.begin()
       this.mesh2motion_engine.show_animation_player(true)
 
-      const retargetable_meshes: Scene | null = this.step_load_target_model.get_retargetable_meshes()
-
-      if (retargetable_meshes !== null) {
-        this.animation_listing_step.load_and_apply_default_animation_to_skinned_mesh(retargetable_meshes)
-        this.animation_listing_step.start_preview()
-      } else {
-        console.error('Retargetable meshes are null while processing click button.')
-      }
+      this.animation_listing_step.load_and_apply_default_animation_to_skinned_mesh()
+      this.animation_listing_step.start_preview()
     }
   }
 
