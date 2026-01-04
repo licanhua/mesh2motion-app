@@ -69,6 +69,17 @@ export class Mesh2MotionEngine {
 
   private environment_container: Group = new Group()
   private readonly eventListeners: EventListeners
+  private grid_helper: THREE.GridHelper | undefined
+  private axes_helper: THREE.AxesHelper | undefined
+  
+  private floor_material_settings = {
+    type: 'standard',
+    color: '#e0e0e0',
+    metalness: 0.4,
+    roughness: 0.6,
+    opacity: 1.0,
+    shininess: 0
+  }
 
   constructor () {
     this.eventListeners = new EventListeners(this)
@@ -190,6 +201,9 @@ export class Mesh2MotionEngine {
   } // end setup_environment()
 
   public regenerate_floor_grid (): void {
+    // Store current grid visibility state
+    const grid_was_visible = this.grid_helper?.visible ?? true
+    
     // remove previous setup objects from scene if they exist
     const setup_container = this.scene.getObjectByName('Setup objects')
     if (setup_container !== null) {
@@ -211,8 +225,27 @@ export class Mesh2MotionEngine {
     this.environment_container = new Group()
     this.environment_container.name = 'Setup objects'
     this.environment_container.add(...Generators.create_default_lights(light_strength))
-    this.environment_container.add(...Generators.create_grid_helper(grid_color, floor_color))
+    const [grid_helper, floor_mesh, axes_helper] = Generators.create_grid_helper(grid_color, floor_color, this.floor_material_settings)
+    this.grid_helper = grid_helper
+    this.axes_helper = axes_helper
+    this.grid_helper.visible = grid_was_visible // Restore visibility state
+    this.axes_helper.visible = grid_was_visible // Align with grid visibility
+    this.environment_container.add(grid_helper, floor_mesh, axes_helper)
     this.scene.add(this.environment_container)
+  }
+
+  public toggle_grid_visibility (visible: boolean): void {
+    if (this.grid_helper !== undefined) {
+      this.grid_helper.visible = visible
+    }
+    if (this.axes_helper !== undefined) {
+      this.axes_helper.visible = visible
+    }
+  }
+
+  public update_floor_material (settings: any): void {
+    this.floor_material_settings = { ...this.floor_material_settings, ...settings }
+    this.regenerate_floor_grid()
   }
 
   public regenerate_skeleton_helper (new_skeleton: Skeleton, helper_name = 'Skeleton Helper'): void {

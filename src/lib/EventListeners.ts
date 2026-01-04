@@ -14,6 +14,99 @@ export class EventListeners {
       this.bootstrap.regenerate_floor_grid()
     })
 
+    // Floor settings panel
+    this.bootstrap.ui.dom_floor_settings_button?.addEventListener('click', () => {
+      if (this.bootstrap.ui.dom_floor_settings_panel != null) {
+        this.bootstrap.ui.dom_floor_settings_panel.style.display = 'flex'
+      }
+    })
+
+    this.bootstrap.ui.dom_close_floor_settings?.addEventListener('click', () => {
+      if (this.bootstrap.ui.dom_floor_settings_panel != null) {
+        this.bootstrap.ui.dom_floor_settings_panel.style.display = 'none'
+      }
+    })
+
+    // Floor material type
+    this.bootstrap.ui.dom_floor_material_type?.addEventListener('change', (event: Event) => {
+      const type = (event.target as HTMLSelectElement).value
+      this.bootstrap.update_floor_material({ type })
+    })
+
+    // Floor color picker
+    this.bootstrap.ui.dom_floor_color?.addEventListener('input', (event: Event) => {
+      const color = (event.target as HTMLInputElement).value
+      this.bootstrap.update_floor_material({ color })
+    })
+
+    // Metalness slider
+    this.bootstrap.ui.dom_floor_metalness?.addEventListener('input', (event: Event) => {
+      const value = parseFloat((event.target as HTMLInputElement).value)
+      if (this.bootstrap.ui.dom_floor_metalness_value != null) {
+        this.bootstrap.ui.dom_floor_metalness_value.textContent = value.toFixed(1)
+      }
+      this.bootstrap.update_floor_material({ metalness: value })
+    })
+
+    // Roughness slider
+    this.bootstrap.ui.dom_floor_roughness?.addEventListener('input', (event: Event) => {
+      const value = parseFloat((event.target as HTMLInputElement).value)
+      if (this.bootstrap.ui.dom_floor_roughness_value != null) {
+        this.bootstrap.ui.dom_floor_roughness_value.textContent = value.toFixed(1)
+      }
+      this.bootstrap.update_floor_material({ roughness: value })
+    })
+
+    // Opacity slider
+    this.bootstrap.ui.dom_floor_opacity?.addEventListener('input', (event: Event) => {
+      const value = parseFloat((event.target as HTMLInputElement).value)
+      if (this.bootstrap.ui.dom_floor_opacity_value != null) {
+        this.bootstrap.ui.dom_floor_opacity_value.textContent = value.toFixed(1)
+      }
+      this.bootstrap.update_floor_material({ opacity: value })
+    })
+
+    // Shininess slider
+    this.bootstrap.ui.dom_floor_shininess?.addEventListener('input', (event: Event) => {
+      const value = parseFloat((event.target as HTMLInputElement).value)
+      if (this.bootstrap.ui.dom_floor_shininess_value != null) {
+        this.bootstrap.ui.dom_floor_shininess_value.textContent = value.toString()
+      }
+      this.bootstrap.update_floor_material({ shininess: value })
+    })
+
+    // Show grid checkbox
+    this.bootstrap.ui.dom_show_grid?.addEventListener('change', (event: Event) => {
+      const checked = (event.target as HTMLInputElement).checked
+      this.bootstrap.toggle_grid_visibility(checked)
+    })
+
+    // Reset floor material
+    this.bootstrap.ui.dom_reset_floor_material?.addEventListener('click', () => {
+      // Reset to defaults
+      if (this.bootstrap.ui.dom_floor_material_type != null) this.bootstrap.ui.dom_floor_material_type.value = 'standard'
+      if (this.bootstrap.ui.dom_floor_color != null) this.bootstrap.ui.dom_floor_color.value = '#e0e0e0'
+      if (this.bootstrap.ui.dom_floor_metalness != null) this.bootstrap.ui.dom_floor_metalness.value = '0.4'
+      if (this.bootstrap.ui.dom_floor_metalness_value != null) this.bootstrap.ui.dom_floor_metalness_value.textContent = '0.4'
+      if (this.bootstrap.ui.dom_floor_roughness != null) this.bootstrap.ui.dom_floor_roughness.value = '0.6'
+      if (this.bootstrap.ui.dom_floor_roughness_value != null) this.bootstrap.ui.dom_floor_roughness_value.textContent = '0.6'
+      if (this.bootstrap.ui.dom_floor_opacity != null) this.bootstrap.ui.dom_floor_opacity.value = '1.0'
+      if (this.bootstrap.ui.dom_floor_opacity_value != null) this.bootstrap.ui.dom_floor_opacity_value.textContent = '1.0'
+      if (this.bootstrap.ui.dom_floor_shininess != null) this.bootstrap.ui.dom_floor_shininess.value = '0'
+      if (this.bootstrap.ui.dom_floor_shininess_value != null) this.bootstrap.ui.dom_floor_shininess_value.textContent = '0'
+      if (this.bootstrap.ui.dom_show_grid != null) this.bootstrap.ui.dom_show_grid.checked = true
+      
+      this.bootstrap.update_floor_material({
+        type: 'standard',
+        color: '#e0e0e0',
+        metalness: 0.4,
+        roughness: 0.6,
+        opacity: 1.0,
+        shininess: 0
+      })
+      this.bootstrap.toggle_grid_visibility(true)
+    })
+
     this.bootstrap.load_skeleton_step.addEventListener('skeletonLoaded', () => {
       this.bootstrap.edit_skeleton_step.load_original_armature_from_model(this.bootstrap.load_skeleton_step.armature())
       this.bootstrap.process_step = this.bootstrap.process_step_changed(ProcessStep.EditSkeleton)

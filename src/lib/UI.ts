@@ -191,6 +191,23 @@ export class UI {
     this.dom_build_version = document.querySelector('#build-version')
 
     this.dom_attribution_link = document.querySelector('#attribution-link')
+    
+    // Floor settings
+    this.dom_floor_settings_button = document.querySelector('#floor-settings-button')
+    this.dom_floor_settings_panel = document.querySelector('#floor-settings-panel')
+    this.dom_close_floor_settings = document.querySelector('#close-floor-settings')
+    this.dom_floor_material_type = document.querySelector('#floor-material-type')
+    this.dom_floor_color = document.querySelector('#floor-color')
+    this.dom_floor_metalness = document.querySelector('#floor-metalness')
+    this.dom_floor_metalness_value = document.querySelector('#floor-metalness-value')
+    this.dom_floor_roughness = document.querySelector('#floor-roughness')
+    this.dom_floor_roughness_value = document.querySelector('#floor-roughness-value')
+    this.dom_floor_opacity = document.querySelector('#floor-opacity')
+    this.dom_floor_opacity_value = document.querySelector('#floor-opacity-value')
+    this.dom_floor_shininess = document.querySelector('#floor-shininess')
+    this.dom_floor_shininess_value = document.querySelector('#floor-shininess-value')
+    this.dom_show_grid = document.querySelector('#show-grid')
+    this.dom_reset_floor_material = document.querySelector('#reset-floor-material')
 
     // UI for exporting the animation
     this.dom_export_button_hidden_link = document.querySelector('#download-hidden-link')

@@ -1,7 +1,7 @@
 import {
   PerspectiveCamera, DoubleSide, FrontSide, DirectionalLight, GridHelper,
   Bone, MeshBasicMaterial, Skeleton, AmbientLight, PlaneGeometry, Mesh,
-  SphereGeometry, MeshPhongMaterial, AxesHelper,
+  SphereGeometry, MeshPhongMaterial, MeshStandardMaterial, AxesHelper,
   Vector3, BufferGeometry, type Object3D, type WebGLRenderer,
   Group, Line, LineBasicMaterial, BufferAttribute, Vector2
 } from 'three'
@@ -30,19 +30,49 @@ export class Generators {
     `
   }
 
-  static create_grid_helper (grid_color: number = 0x111155, floor_color: number = 0x4e4e7a): any[] {
+  static create_grid_helper (grid_color: number = 0x111155, floor_color: number = 0x4e4e7a, material_settings: any = {}): any[] {
     // create floor mesh and add to scene to help with shadows
     const grid_size: number = 180
     const divisions: number = 100
     const floor_geometry = new PlaneGeometry(grid_size, grid_size, divisions, divisions)
-    const floor_material = new MeshPhongMaterial({
-      color: floor_color,
-      wireframe: false,
-      transparent: true,
-      opacity: 0.7,
-      shininess: 0.0,
-      specular: 0.0
-    })
+    
+    // Default settings
+    const settings = {
+      type: 'standard',
+      color: '#e0e0e0',
+      metalness: 0.4,
+      roughness: 0.6,
+      opacity: 1.0,
+      shininess: 0,
+      ...material_settings
+    }
+    
+    // Convert hex color to Three.js color number if needed
+    const final_color = typeof settings.color === 'string' ? parseInt(settings.color.replace('#', '0x')) : floor_color
+    
+    let floor_material: MeshPhongMaterial | MeshStandardMaterial
+    
+    if (settings.type === 'standard') {
+      // PBR Standard material
+      floor_material = new MeshStandardMaterial({
+        color: final_color,
+        metalness: settings.metalness,
+        roughness: settings.roughness,
+        transparent: true,
+        opacity: settings.opacity,
+        envMapIntensity: 1.5
+      })
+    } else {
+      // Phong material
+      floor_material = new MeshPhongMaterial({
+        color: final_color,
+        transparent: true,
+        opacity: settings.opacity,
+        shininess: settings.shininess,
+        specular: settings.shininess > 0 ? 0xffffff : 0x000000
+      })
+    }
+    
     floor_material.side = FrontSide // helps us see the mesh when we are below the character
 
     const floor_mesh = new Mesh(floor_geometry, floor_material)
