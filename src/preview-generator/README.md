@@ -5,7 +5,7 @@ The goal of this preview generator is to create small animated clip previews to 
 
 ## Workflow
 
-1. Go to the URL manually for the preview generator once the web server is started (command: npm run dev): http://localhost:5173/preview-generator/index.html
+1. Go to the URL manually for the preview generator once the web server is started (command: pnpm run dev): http://localhost:5173/preview-generator/index.html
 2. Select a 3d model that you want to generate animations from the drop-down.
 3. Rotate and position the 3d model
 4. Press the record button

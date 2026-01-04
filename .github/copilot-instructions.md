@@ -15,7 +15,7 @@ The application uses **Three.js** for 3D graphics and **TypeScript** for develop
 - **Build Tool**: Vite
 - **3D Library**: Three.js (try to use latest stable version)
 - **Version Control**: Git (hosted on GitHub)
-- **Package Manager**: npm / Node.js 24+
+- **Package Manager**: pnpm / Node.js 24+
 - **Format Support**: GLTF, GLB, FBX, DAE, ZIP archives
 - **Utilities**: JSZip, FileSaver, Tippy.js
 
@@ -170,9 +170,9 @@ scene.add(mesh)
 
 ## Development Commands
 ```bash
-npm install          # Install dependencies
-npm run dev          # Start development server (Vite)
-npm run build        # Create production build
+pnpm install         # Install dependencies
+pnpm run dev         # Start development server (Vite)
+pnpm run build       # Create production build
 ```
 
 ## File Encoding & Format

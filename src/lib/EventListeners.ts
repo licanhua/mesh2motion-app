@@ -112,11 +112,6 @@ export class EventListeners {
       this.bootstrap.load_model_step.rotate_model_geometry('z', 90)
     })
 
-    this.bootstrap.ui.dom_move_model_to_floor_button?.addEventListener('click', () => {
-      const mesh_data = this.bootstrap.load_model_step.model_meshes()
-      ModelCleanupUtility.move_model_to_floor(mesh_data)
-    })
-
     this.bootstrap.ui.dom_show_skeleton_checkbox?.addEventListener('click', (event: MouseEvent) => {
       if (this.bootstrap.skeleton_helper !== undefined) {
         this.bootstrap.skeleton_helper.visible = event.target.checked

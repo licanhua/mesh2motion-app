@@ -27,15 +27,15 @@ There are instructions built into the web application, but this is the general f
 5. Select which animations you want to use, then export (currently only GLB/GLTF supported format)
 
 ## Building and running locally
-The main dependency you need is Node.js. I am using 24, but other versions probably work fine too. Open you command line tool to the directory this readme is in. Run ths following commands to start the web server.
+The main dependency you need is Node.js. I am using 24, but other versions probably work fine too. You'll also need pnpm installed (`npm install -g pnpm` if you don't have it). Open you command line tool to the directory this readme is in. Run ths following commands to start the web server.
 
-    npm install
-    npm run dev
+    pnpm install
+    pnpm run dev
 
 ## Creating a production build for the web
 We mostly just have typescript for this project, which web browsers cannot just read, so we need to do a build step to get everything ready for deploying. This project uses Vite for the web server and builder. See the vite.config.js for more info. This command will create a "dist" folder with all the files to serve to the web:
 
-    npm run build
+    pnpm run build
 
 ## Running in Docker
 If you don't want to modify your local file system, you can alternitvely build and run the project from Docker. Make sure you have Docker and Docker Compose installed. Navigate your command line tool to this directory where your Dockerfile is at. Make sure Docker is actually started and running before you run this command.

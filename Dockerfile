@@ -10,8 +10,9 @@ COPY . /app
 WORKDIR /app
 
 RUN sed -i "s/open: !isCodeSandbox/open: false/" vite.config.js
-RUN npm install
+RUN npm install -g pnpm
+RUN pnpm install
 
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+CMD ["pnpm", "run", "dev"]

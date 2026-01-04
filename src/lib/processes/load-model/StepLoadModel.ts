@@ -366,6 +366,9 @@ export class StepLoadModel extends EventTarget {
 
     console.log('final mesh data should be prepared at this point', this.final_mesh_data)
 
+    // Automatically move model to floor after loading
+    ModelCleanupUtility.move_model_to_floor(this.final_mesh_data)
+
     this.dispatchEvent(new CustomEvent('modelLoaded'))
   }
 
