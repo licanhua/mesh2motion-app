@@ -42,7 +42,7 @@ export async function add_preview_skeleton (
   root.add(preview_skeleton_group)
 
   // Load and customize skeleton
-  const loaded_scene: Object3D<Object3DEventMap> = await load_skeleton(skeleton_file_path)
+  const loaded_scene: Object3D<Object3DEventMap> = await load_skeleton(`${import.meta.env.BASE_URL}${skeleton_file_path}`)
   if (skeleton_file_path === SkeletonType.Human) {
     const helper = new HandHelper()
     helper.modify_hand_skeleton(loaded_scene, hand_skeleton_type)

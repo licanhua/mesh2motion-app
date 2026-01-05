@@ -75,13 +75,13 @@ export class MarketingBootstrap {
     this.mesh2motion_engine.load_model_step.addEventListener('modelLoaded', () => {
       // this (this.skeleton_type) value contains the filename for the skeleton rig
       this.mesh2motion_engine.process_step_changed(ProcessStep.LoadSkeleton)
-      this.mesh2motion_engine.load_skeleton_step.load_skeleton_file('../' + this.skeleton_type)
+      this.mesh2motion_engine.load_skeleton_step.load_skeleton_file(`${import.meta.env.BASE_URL}${this.skeleton_type}`)
       this.mesh2motion_engine.load_skeleton_step.set_skeleton_type(this.skeleton_type)
     })
 
     // need to automatically finish the edit skeleton step and move onto the next step
     this.mesh2motion_engine.load_skeleton_step.addEventListener('skeletonLoaded', () => {
-      this.mesh2motion_engine.animations_listing_step.set_animations_file_path('../animations/')
+      this.mesh2motion_engine.animations_listing_step.set_animations_file_path(`${import.meta.env.BASE_URL}animations/`)
       this.mesh2motion_engine.process_step_changed(ProcessStep.BindPose)
     })
   }

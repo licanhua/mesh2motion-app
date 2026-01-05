@@ -169,7 +169,7 @@ export class StepLoadSkeleton extends EventTarget {
         }
 
         // add back loading information here
-        this.load_skeleton_file(this.skeleton_file_path())
+        this.load_skeleton_file(`${import.meta.env.BASE_URL}${this.skeleton_file_path()}`)
       })
     }// end if statement
 
